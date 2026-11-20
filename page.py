@@ -142,6 +142,9 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <p class="muted">Swing high ▼ = highest high of 5 candles on each side; swing low ▲ = lowest low of 5 candles on each side.</p>
 {charts_html}
 
+<h2>5 F&O stocks nearest above their swing low (daily)</h2>
+{_table(_read_csv("signals/near_swing_low.csv"), ["symbol", "close", "swing_low", "swing_low_date", "distance_%"])}
+
 <h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY, CRUDE ({di})</h2>
 <p class="muted">CRUDE = WTI crude futures (CL=F, USD) as a proxy for MCX crude; formations reported 5:00 PM – 11:30 PM IST.</p>
 <p class="muted"><b>(a) 2-candle</b> ({len(idx2)}): green 15-min candle → next candle red, closing below its low. {dl(i2)}</p>

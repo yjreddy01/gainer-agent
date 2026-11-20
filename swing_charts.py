@@ -7,6 +7,9 @@ Swing high / swing low charts for the TOP 5 Nifty 50 stocks by market capitalisa
   Swing low : a candle whose LOW  is the lowest  of the SWING candles on each side.
 - Saves charts to docs/charts/<SYMBOL>.png and the swing points to signals/swings_<SYMBOL>.csv.
 
+Also lists the 5 F&O stocks whose close is nearest ABOVE their latest swing low (within 3%),
+with charts -> docs/charts/near/, signals/near_swing_low.csv, and Telegram.
+
 Usage: python swing_charts.py [--swing 5] [--months 6] [--top 5]
 """
 
@@ -87,11 +90,35 @@ def chart(sym, mcap, df, hi, lo, k, path):
     ax.set_xlim(-1, len(df) + 1)
     ax.set_ylim(df["Low"].min() - rng * 0.1, df["High"].max() + rng * 0.08)
     ax.grid(alpha=0.25)
+    mc = f"mcap ₹{mcap / 1e12:,.2f} lakh cr · " if mcap else ""
     ax.set_title(f"{sym} — daily, swing highs ▼ / lows ▲ ({k} candles each side) · "
-                 f"mcap ₹{mcap / 1e12:,.2f} lakh cr · last close {df['Close'].iloc[-1]:,.2f}", fontsize=11)
+                 f"{mc}last close {df['Close'].iloc[-1]:,.2f}", fontsize=11)
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
+
+
+def near_swing_low(k, months, n=5, max_pct=3.0):
+    """F&O stocks whose last daily close is just ABOVE their latest swing low (within max_pct %)."""
+    from strategy import download, get_fo_symbols
+    data = download(get_fo_symbols(), "1d", f"{months}mo")
+    rows = []
+    for s, df in data.items():
+        df = df[["Open", "High", "Low", "Close"]].dropna()
+        if len(df) < 2 * k + 5:
+            continue
+        hi, lo = swings(df, k)
+        if not lo:
+            continue
+        sl = float(df["Low"].iloc[lo[-1]])
+        close = float(df["Close"].iloc[-1])
+        dist = (close / sl - 1) * 100
+        if 0 <= dist <= max_pct:
+            rows.append({"symbol": s, "close": round(close, 2), "swing_low": round(sl, 2),
+                         "swing_low_date": df.index[lo[-1]].date(), "distance_%": round(dist, 2),
+                         "df": df, "hi": hi, "lo": lo})
+    rows.sort(key=lambda r: r["distance_%"])
+    return rows[:n]
 
 
 def main():
@@ -132,6 +159,28 @@ def main():
                        f"#{r['rank']} {r['symbol']} (1-day) · close {r['last_close']}\n"
                        f"Last swing high {r['last_swing_high']} ({r['last_swing_high_date']:%d %b})\n"
                        f"Last swing low {r['last_swing_low']} ({r['last_swing_low_date']:%d %b})")
+
+    # 5 F&O stocks nearest above their swing low
+    near = near_swing_low(a.swing, a.months)
+    os.makedirs("docs/charts/near", exist_ok=True)
+    for f in os.listdir("docs/charts/near"):
+        os.remove(os.path.join("docs/charts/near", f))
+    for r in near:
+        chart(r["symbol"], 0, r["df"], r["hi"], r["lo"], a.swing, f"docs/charts/near/{r['symbol']}.png")
+    nd = pd.DataFrame([{k: v for k, v in r.items() if k not in ("df", "hi", "lo")} for r in near])
+    nd.to_csv("signals/near_swing_low.csv", index=False)
+    print(f"[info] Near swing low: {', '.join(nd['symbol']) if not nd.empty else 'none'}")
+    from monitor import telegram, telegram_photo
+    if nd.empty:
+        telegram("Near swing low (1-day): no F&O stock is within 3% above its last swing low today.")
+    else:
+        telegram("Near swing low (1-day) - 5 F&O stocks closest above their last swing low:\n" +
+                 "\n".join(f"{r['symbol']}: close {r['close']}, swing low {r['swing_low']} "
+                           f"({r['swing_low_date']:%d %b}), {r['distance_%']}% above" for r in near))
+        for r in near:
+            telegram_photo(f"docs/charts/near/{r['symbol']}.png",
+                           f"{r['symbol']} (1-day) · close {r['close']} · {r['distance_%']}% above swing low "
+                           f"{r['swing_low']} ({r['swing_low_date']:%d %b})")
 
     try:
         import page
