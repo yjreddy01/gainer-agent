@@ -139,9 +139,9 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <p class="muted"><b>(b) 3-candle</b> ({len(idx3)}): green → next red breaks its low → within 5 candles a close above the
 green candle's high. {dl(i3)}</p>
 {_table(idx3, ["index", "time", "green_candle", "red_candle", "close", "candles_since_red"])}
-<p class="muted"><b>SHORT signals</b> ({len(idxs)}): green → next candle red with its high above the green high → within
-5 candles a close below the red candle's low (red high = stop-loss reference). {dl(isf)}</p>
-{_table(idxs, ["index", "time", "green_candle", "red_candle", "close", "red_high_sl"])}
+<p class="muted"><b>SHORT signals</b> ({len(idxs)}): 4 candles in a row — green → red with high above the green high →
+green with high below the red high → close below that green candle's low (red high = stop-loss reference). {dl(isf)}</p>
+{_table(idxs, ["index", "time", "green1", "red", "green2", "close", "red_high_sl"])}
 
 <h2>(a) Daily 2-candle formation ({len(two)}) — {d2}</h2>
 <p class="muted">Yesterday green → today red, closing below the green candle's low. {dl(p2)}</p>
