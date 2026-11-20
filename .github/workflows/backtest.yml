@@ -1,0 +1,42 @@
+name: Daily backtest (after market close)
+
+on:
+  schedule:
+    - cron: "17 10 * * 1-5"       # 3:47 PM IST
+  push:                           # re-run automatically when the strategy changes
+    branches: [main]
+    paths: ["strategy.py", "backtest.py", "gainer_agent.py"]
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of trading days to backtest (max ~50)"
+        default: "20"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gainer-agent
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run backtest
+        run: python backtest.py --days ${{ github.event.inputs.days || '20' }}
+      - name: Save results
+        run: |
+          git config user.name "gainer-agent"
+          git config user.email "actions@github.com"
+          git add docs signals
+          git diff --cached --quiet && exit 0
+          git commit -m "Backtest $(TZ=Asia/Kolkata date +'%F')"
+          git pull --rebase -X theirs origin main && git push

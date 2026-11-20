@@ -1,0 +1,43 @@
+name: Live monitor (every 5 min, 9:20 AM - 2:00 PM IST)
+
+on:
+  schedule:
+    - cron: "50,55 3 * * 1-5"     # 9:20, 9:25 IST
+    - cron: "*/5 4-7 * * 1-5"     # 9:30 - 13:25 IST
+    - cron: "0-30/5 8 * * 1-5"    # 13:30 - 14:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: gainer-agent
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Check for BUY alerts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python monitor.py
+      - name: Save results
+        run: |
+          git config user.name "gainer-agent"
+          git config user.email "actions@github.com"
+          git add docs signals
+          git diff --cached --quiet && exit 0
+          git commit -m "Monitor $(TZ=Asia/Kolkata date +'%F %H:%M')"
+          git pull --rebase -X theirs origin main && git push
