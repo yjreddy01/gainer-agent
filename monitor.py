@@ -54,8 +54,17 @@ def github_issue(title, body, label="buy-alert"):
     print(f"[info] GitHub issue: {r.status_code}")
 
 
+def tg_creds():
+    """Pull the bare token / chat id out of the secrets, even if extra text (a link, 'bot', spaces) was pasted."""
+    import re
+    raw_t, raw_c = os.getenv("TELEGRAM_BOT_TOKEN") or "", os.getenv("TELEGRAM_CHAT_ID") or ""
+    m = re.search(r"\d{6,}:[A-Za-z0-9_-]{30,}", raw_t)
+    c = re.search(r"-?\d{5,}", raw_c)
+    return (m.group(0) if m else raw_t.strip()), (c.group(0) if c else raw_c.strip())
+
+
 def telegram(text):
-    token, chat = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    token, chat = tg_creds()
     if not (token and chat):
         return
     import requests
@@ -69,7 +78,7 @@ def telegram(text):
 
 def telegram_file(path, caption=""):
     """Send a file (e.g. a CSV) to Telegram as a document."""
-    token, chat = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    token, chat = tg_creds()
     if not (token and chat and os.path.exists(path)):
         return
     import requests
