@@ -152,13 +152,7 @@ def main():
         print(f"[info] {s}: {len(hi)} swing highs, {len(lo)} swing lows")
     pd.DataFrame(rows).to_csv("signals/swing_summary.csv", index=False)
 
-    # send the charts to Telegram
-    from monitor import telegram_photo
-    for r in rows:
-        telegram_photo(f"docs/charts/{r['symbol']}.png",
-                       f"#{r['rank']} {r['symbol']} (1-day) · close {r['last_close']}\n"
-                       f"Last swing high {r['last_swing_high']} ({r['last_swing_high_date']:%d %b})\n"
-                       f"Last swing low {r['last_swing_low']} ({r['last_swing_low_date']:%d %b})")
+    # (top-5 market-cap charts stay on the web page only; Telegram gets the 5 near-swing-low charts)
 
     # 5 F&O stocks nearest above their swing low
     near = near_swing_low(a.swing, a.months)
