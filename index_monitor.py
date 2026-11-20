@@ -12,8 +12,8 @@ Same logic as the daily lists, on 15-minute candles:
 Each run replays all completed 15-min candles, so a late run never misses a formation.
 During market hours every new formation is a GitHub issue (+ Telegram if configured).
 A run after market close sends one summary instead.
-  SHORT (4 consecutive candles): GREEN -> RED with high above the green high -> GREEN with high below
-      the red high -> candle closes below that green candle's LOW  => short alert (red high = SL reference)
+  SHORT: GREEN candle -> next candle RED with its HIGH above the green high -> a later candle (within
+      LOOKBACK) closes below the red candle's LOW  => short alert (red high shown as stop-loss reference)
 Files: signals/index_2candle_<date>.csv, signals/index_3candle_<date>.csv, signals/index_short_<date>.csv
 """
 
@@ -87,25 +87,25 @@ def three_candle(df, name, lookback=LOOKBACK):
     return ev
 
 
-COLS_S = ["date", "index", "time", "green1", "red", "green2", "close", "red_high_sl"]
+COLS_S = ["date", "index", "time", "green_candle", "red_candle", "close", "red_high_sl", "candles_since_red"]
 
 
-def short_signal(df, name):
-    """SHORT - four consecutive 15-min candles:
-      1. GREEN candle
-      2. RED candle whose HIGH goes above candle 1's high
-      3. GREEN candle whose HIGH stays BELOW the red candle's high (lower high)
-      4. candle CLOSES BELOW candle 3's LOW  -> short alert (red candle high = stop-loss reference)"""
+def short_signal(df, name, lookback=LOOKBACK):
+    """SHORT: GREEN candle -> next candle RED whose HIGH goes above the green candle's high ->
+    a later candle (within `lookback`) CLOSES below the red candle's LOW (first such close only)."""
     ev = []
-    for i in range(3, len(df)):
-        g1, r, g2, c = df.iloc[i - 3], df.iloc[i - 2], df.iloc[i - 1], df.iloc[i]
-        if (g1["Close"] > g1["Open"] and r["Close"] < r["Open"] and r["High"] > g1["High"]
-                and g2["Close"] > g2["Open"] and g2["High"] < r["High"] and c["Close"] < g2["Low"]):
-            ev.append({"date": df.index[i].date(), "index": name, "time": df.index[i].strftime("%H:%M"),
-                       "green1": f"{fmt_t(df.index[i - 3])} H {g1['High']:.2f}",
-                       "red": f"{fmt_t(df.index[i - 2])} H {r['High']:.2f}",
-                       "green2": f"{fmt_t(df.index[i - 1])} H {g2['High']:.2f} / L {g2['Low']:.2f}",
-                       "close": round(float(c["Close"]), 2), "red_high_sl": round(float(r["High"]), 2)})
+    for i in range(1, len(df)):
+        g, r = df.iloc[i - 1], df.iloc[i]
+        if not (g["Close"] > g["Open"] and r["Close"] < r["Open"] and r["High"] > g["High"]):
+            continue
+        for j in range(i + 1, min(i + lookback + 1, len(df))):
+            if df.iloc[j]["Close"] < r["Low"]:
+                ev.append({"date": df.index[j].date(), "index": name, "time": df.index[j].strftime("%H:%M"),
+                           "green_candle": f"{fmt_t(df.index[i - 1])} H {g['High']:.2f}",
+                           "red_candle": f"{fmt_t(df.index[i])} H {r['High']:.2f} / L {r['Low']:.2f}",
+                           "close": round(float(df.iloc[j]["Close"]), 2),
+                           "red_high_sl": round(float(r["High"]), 2), "candles_since_red": j - i})
+                break
     return ev
 
 
@@ -177,13 +177,13 @@ def main():
             notify(f"[{e['index']} 15m] 3-candle at {e['time']}: closed {e['close']} above green high "
                    f"({e['green_candle']})", "index")
         for _, e in news.iterrows():
-            github_issue(f"[{e['index']} 15m] SHORT signal · closed below green candle low · {e['time']} · {today:%d %b}",
-                         f"{mention}**SHORT {e['index']}** (15-min):\n1. green {e['green1']}\n2. red {e['red']} "
-                         f"(above green high)\n3. green {e['green2']} (high below red high)\n4. **{e['time']} candle "
-                         f"closed {e['close']}, below candle 3's low**\n\nStop-loss reference: red candle high "
-                         f"**{e['red_high_sl']}**.\n\n{PAGE_URL}", "index-short")
-            notify(f"SHORT {e['index']} (15m) at {e['time']}: closed {e['close']} below green candle low "
-                   f"({e['green2']}). SL ref: red high {e['red_high_sl']}", "index")
+            github_issue(f"[{e['index']} 15m] SHORT signal · closed below red candle low · {e['time']} · {today:%d %b}",
+                         f"{mention}**SHORT {e['index']}** (15-min): green candle {e['green_candle']} → next red candle "
+                         f"{e['red_candle']} went above the green high → **{e['time']} candle closed {e['close']}, below "
+                         f"the red candle's low**.\n\nStop-loss reference: red candle high **{e['red_high_sl']}**.\n\n{PAGE_URL}",
+                         "index-short")
+            notify(f"SHORT {e['index']} (15m) at {e['time']}: closed {e['close']} below red candle low "
+                   f"({e['red_candle']}). SL ref: red high {e['red_high_sl']}", "index")
     if len(late2) or len(late3) or len(lates):
         def lines(df, cols):
             return "\n".join("| " + " | ".join(str(r[c]) for c in cols) + " |" for _, r in df.iterrows())
@@ -192,8 +192,8 @@ def main():
                 f"{lines(t2, ['index', 'time', 'green_candle', 'red_close'])}\n\n"
                 f"### (b) 3-candle — {len(t3)}\n| Index | Time | Green candle | Red candle | Close | Candles since red |\n"
                 f"|---|---|---|---|---|---|\n{lines(t3, ['index', 'time', 'green_candle', 'red_candle', 'close', 'candles_since_red'])}"
-                f"\n\n### SHORT signals — {len(ts)}\n| Index | Time | Green 1 | Red | Green 2 | Close | SL ref (red high) |\n"
-                f"|---|---|---|---|---|---|---|\n{lines(ts, ['index', 'time', 'green1', 'red', 'green2', 'close', 'red_high_sl'])}"
+                f"\n\n### SHORT signals — {len(ts)}\n| Index | Time | Green candle | Red candle | Close | SL ref (red high) |\n"
+                f"|---|---|---|---|---|---|\n{lines(ts, ['index', 'time', 'green_candle', 'red_candle', 'close', 'red_high_sl'])}"
                 f"\n\n{PAGE_URL}")
         github_issue(f"[Index 15m] {today:%d %b} summary · 2-candle: {len(t2)} · 3-candle: {len(t3)} · short: {len(ts)}",
                      body, "index-15m")
