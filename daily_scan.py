@@ -113,8 +113,8 @@ def send_pattern_charts(daily, last, two, three, k=5):
                      f"today close {r['today_close']} above green high ({r['change_%']:+}%)"))
     if not jobs:
         return
-    telegram(f"Charts for today's daily patterns ({last:%d %b}): "
-             f"{len(two)} x 2-candle, {len(three)} x 3-candle. Shaded = pattern candles.")
+    from swing_charts import make_pdf
+    pngs, lines = [], []
     for sym, kind, hl, cap in jobs:
         df = daily.get(sym)
         if df is None:
@@ -124,10 +124,12 @@ def send_pattern_charts(daily, last, two, three, k=5):
         path = f"{out}/{kind}_{sym}.png"
         try:
             chart(sym, 0, df, hi, lo, k, path, highlight=hl, title_extra=f" · {kind}")
-            telegram_photo(path, f"{sym} · {cap}")
+            pngs.append(path)
+            lines.append(f"{sym:<12} {cap}"[:150])
         except Exception as e:
             print(f"[warn] chart {sym}: {e}")
-
-
-if __name__ == "__main__":
-    main()
+    pdf = f"{out}/daily_patterns_{last}.pdf"
+    make_pdf(pngs, pdf, f"Daily pattern charts - {last:%d %b %Y}  ({len(two)} x 2-candle, {len(three)} x 3-candle)",
+             ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.", ""]
+             + lines)
+    telegram_file(pdf, f"Daily pattern charts - {last:%d %b} - {len(pngs)} stocks (1-day, swing highs/lows, volume)")

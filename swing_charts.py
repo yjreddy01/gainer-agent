@@ -152,6 +152,31 @@ def near_swing_low(k, months, n=5, max_pct=3.0):
     return rows[:n]
 
 
+def make_pdf(pngs, path, title, rows=None):
+    """Combine chart PNGs into one PDF: a summary page (title + optional table rows) then one chart per page."""
+    from matplotlib.backends.backend_pdf import PdfPages
+    with PdfPages(path) as pdf:
+        fig = plt.figure(figsize=(11.69, 8.27))                       # A4 landscape
+        fig.text(0.05, 0.92, title, fontsize=18, fontweight="bold")
+        y = 0.85
+        for line in (rows or []):
+            fig.text(0.05, y, line, fontsize=10, family="monospace")
+            y -= 0.032
+            if y < 0.05:
+                break
+        pdf.savefig(fig)
+        plt.close(fig)
+        for p in pngs:
+            img = plt.imread(p)
+            fig = plt.figure(figsize=(11.69, 8.27))
+            ax = fig.add_axes([0.02, 0.02, 0.96, 0.96])
+            ax.imshow(img)
+            ax.axis("off")
+            pdf.savefig(fig, dpi=150)
+            plt.close(fig)
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--swing", type=int, default=5)

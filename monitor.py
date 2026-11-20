@@ -86,7 +86,9 @@ def telegram_file(path, caption=""):
         with open(path, "rb") as f:
             r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument",
                               data={"chat_id": chat, "caption": caption[:1000]},
-                              files={"document": (os.path.basename(path), f, "text/csv")}, timeout=30)
+                              files={"document": (os.path.basename(path).replace("&", "and"), f,
+                                                  "application/pdf" if path.endswith(".pdf") else "text/csv")},
+                              timeout=120)
         print(f"[info] Telegram file {os.path.basename(path)}: {r.status_code}")
     except Exception as e:
         print(f"[warn] Telegram file failed: {e}")
