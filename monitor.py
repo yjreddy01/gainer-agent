@@ -93,19 +93,35 @@ def telegram_file(path, caption=""):
 
 
 def telegram_photo(path, caption=""):
-    """Send an image (chart) to Telegram."""
+    """Send an image (chart) to Telegram. Waits and retries if Telegram asks to slow down. Returns True if sent."""
     token, chat = tg_creds()
     if not (token and chat and os.path.exists(path)):
-        return
+        print(f"[warn] Telegram photo skipped ({'no file' if not os.path.exists(path) else 'no Telegram secrets'}): {path}")
+        return False
     import requests
-    try:
-        with open(path, "rb") as f:
-            r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
-                              data={"chat_id": chat, "caption": caption[:1000]},
-                              files={"photo": (os.path.basename(path), f, "image/png")}, timeout=60)
-        print(f"[info] Telegram photo {os.path.basename(path)}: {r.status_code}")
-    except Exception as e:
-        print(f"[warn] Telegram photo failed: {e}")
+    for attempt in range(4):
+        try:
+            with open(path, "rb") as f:
+                r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
+                                  data={"chat_id": chat, "caption": caption[:1000]},
+                                  files={"photo": (os.path.basename(path).replace("&", "and"), f, "image/png")},
+                                  timeout=60)
+            j = r.json()
+            if j.get("ok"):
+                print(f"[info] Telegram photo sent: {os.path.basename(path)}")
+                time.sleep(1.5)                       # stay under Telegram's per-chat rate limit
+                return True
+            wait = j.get("parameters", {}).get("retry_after")
+            if wait:
+                print(f"[info] Telegram rate limit - waiting {wait}s")
+                time.sleep(int(wait) + 1)
+                continue
+            print(f"::warning::Telegram refused {os.path.basename(path)}: {j.get('description')}")
+            return False
+        except Exception as e:
+            print(f"[warn] Telegram photo failed: {e}")
+            time.sleep(3)
+    return False
 
 
 def whatsapp(text):
