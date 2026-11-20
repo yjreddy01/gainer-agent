@@ -3,7 +3,7 @@
 **Results page:** https://yjreddy01.github.io/gainer-agent/
 
 ## Rule
-1. **Qualifier (previous day, 1-hour chart):** a green candle's low was broken by a later red candle, meaning the red candle closed below that low.
+1. **Qualifier (previous day, 1-hour chart):** a red candle broke the low of the green candle right before it, meaning the red candle closed below that green candle's low.
 2. **Trigger (today, 5-minute chart):** a stock gets a BUY alert for its future when all three of these are true:
    - it qualified yesterday,
    - it is in the **top 10 F&O gainers**,

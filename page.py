@@ -106,8 +106,8 @@ def build():
 <h1>Top-Gainer Break Agent</h1>
 <div class="muted">Updated {updated} · Session {session} · last 5-min candle {snap.get('time', '–')}</div>
 
-<div class="rule" style="margin-top:14px"><b>Rule:</b> (1) Qualified = yesterday's 1-hour chart had a green candle whose low was
-broken by a later red candle (close below). (2) Today, BUY the stock future when a qualified stock is in the
+<div class="rule" style="margin-top:14px"><b>Rule:</b> (1) Qualified = on yesterday's 1-hour chart, a red candle broke the low of the
+green candle right before it (closed below it). (2) Today, BUY the stock future when a qualified stock is in the
 <b>top 10 F&O gainers</b> and a 5-min candle <b>closes above the high of today's first 5-min candle</b> (until 2:00 PM).</div>
 
 <h2>Today's BUY alerts</h2>

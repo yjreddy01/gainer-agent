@@ -3,8 +3,8 @@ Strategy core
 =============
 
 QUALIFIER (previous day, 1-hour chart):
-    A GREEN 1h candle whose low was later broken by a RED 1h candle
-    (red candle CLOSES below the green candle's low).
+    A RED 1h candle that breaks the low of the GREEN 1h candle right before it
+    (the red candle CLOSES below the previous green candle's low).
 
 TRIGGER (current day, 5-minute chart), checked on every completed 5-min candle up to the cutoff:
     1. The stock qualified yesterday, AND
@@ -45,14 +45,14 @@ def download(symbols, interval, period):
     return out
 
 
-def qualifiers_for(hourly_by_sym, prev_date, break_mode="close"):
-    """Stocks whose prev-day 1h chart shows a green-candle low broken by a later red candle."""
+def qualifiers_for(hourly_by_sym, prev_date, break_mode="close", adjacent=True):
+    """Stocks whose prev-day 1h chart has a red candle breaking the low of the previous green candle."""
     rows = []
     for s, df in hourly_by_sym.items():
         day = df[df.index.date == prev_date]
         if day.empty:
             continue
-        hits = find_green_low_break(day, break_mode)
+        hits = find_green_low_break(day, break_mode, adjacent)
         if hits:
             h = hits[-1]
             rows.append({"symbol": s, "qual_date": prev_date,
