@@ -1,0 +1,4 @@
+date,symbol,gain_%,prev_close,first15_close,first15_high,first15_low,setup,suggestion,breaks_found,green_candle,red_candle,candles_checked
+2026-11-20,COFORGE,3.54,2041.0,2113.3,2114.7,2031.4,YES,BUY FUTURE,1,11:15 low 2032.2,13:15 close 2020.9,7
+2026-11-20,MPHASIS,3.35,2356.0,2434.9,2436.6,2342.7,YES,BUY FUTURE,1,11:15 low 2351.8,12:15 close 2337.8,7
+2026-11-20,TECHM,1.89,1723.0,1755.6,1759.9,1715.2,YES,BUY FUTURE,1,11:15 low 1716.4,12:15 close 1711.0,7
