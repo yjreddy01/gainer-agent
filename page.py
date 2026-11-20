@@ -69,6 +69,8 @@ def build():
     idx2 = _read_csv(i2) if i2 else pd.DataFrame()
     idx3 = _read_csv(i3) if i3 else pd.DataFrame()
     di = os.path.basename(i2)[14:24] if i2 else "–"
+    isf = _latest("signals/index_short_*.csv")
+    idxs = _read_csv(isf) if isf else pd.DataFrame()
     repo = os.getenv("GITHUB_REPOSITORY", "yjreddy01/gainer-agent")
     dl = lambda f: f"<a href='https://raw.githubusercontent.com/{repo}/main/{f}' download>download CSV</a>" if f else ""
     bts = json.load(open("signals/backtest_summary.json")) if os.path.exists("signals/backtest_summary.json") else {}
@@ -137,6 +139,9 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <p class="muted"><b>(b) 3-candle</b> ({len(idx3)}): green → next red breaks its low → within 5 candles a close above the
 green candle's high. {dl(i3)}</p>
 {_table(idx3, ["index", "time", "green_candle", "red_candle", "close", "candles_since_red"])}
+<p class="muted"><b>SHORT signals</b> ({len(idxs)}): green → next candle red with its high above the green high → within
+5 candles a close below the red candle's low (red high = stop-loss reference). {dl(isf)}</p>
+{_table(idxs, ["index", "time", "green_candle", "red_candle", "close", "red_high_sl"])}
 
 <h2>(a) Daily 2-candle formation ({len(two)}) — {d2}</h2>
 <p class="muted">Yesterday green → today red, closing below the green candle's low. {dl(p2)}</p>

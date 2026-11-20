@@ -79,10 +79,10 @@ def main():
     # attach the files on Telegram: stock lists + today's index 15-min files
     telegram_file(f2, f"(a) Stocks 2-candle - {last:%d %b} - {len(two)} stocks")
     telegram_file(f3, f"(b) Stocks 3-candle - {last:%d %b} - {len(three)} stocks")
-    for kind in ("2candle", "3candle"):
+    for kind, label in (("2candle", "2-candle"), ("3candle", "3-candle"), ("short", "SHORT signals")):
         p = f"signals/index_{kind}_{last}.csv"
         if os.path.exists(p):
-            telegram_file(p, f"Index 15-min {kind[0]}-candle - {last:%d %b}")
+            telegram_file(p, f"Index 15-min {label} - {last:%d %b}")
     page.build()
 
 
