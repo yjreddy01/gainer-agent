@@ -16,7 +16,7 @@ import os
 import sys
 
 import page
-from monitor import retry, github_issue, notify
+from monitor import retry, github_issue, notify, telegram_file
 from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
@@ -76,6 +76,13 @@ def main():
     github_issue(title, body, "daily-list")
     notify(f"[Daily] {last:%d %b}\n(a) 2-candle ({len(two)}): {', '.join(two['symbol']) or '-'}\n"
            f"(b) 3-candle ({len(three)}): {', '.join(three['symbol']) or '-'}" + (f"\n{PAGE_URL}" if PAGE_URL else ""), "daily")
+    # attach the files on Telegram: stock lists + today's index 15-min files
+    telegram_file(f2, f"(a) Stocks 2-candle - {last:%d %b} - {len(two)} stocks")
+    telegram_file(f3, f"(b) Stocks 3-candle - {last:%d %b} - {len(three)} stocks")
+    for kind in ("2candle", "3candle"):
+        p = f"signals/index_{kind}_{last}.csv"
+        if os.path.exists(p):
+            telegram_file(p, f"Index 15-min {kind[0]}-candle - {last:%d %b}")
     page.build()
 
 

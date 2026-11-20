@@ -67,6 +67,22 @@ def telegram(text):
         print(f"[warn] Telegram failed: {e}")
 
 
+def telegram_file(path, caption=""):
+    """Send a file (e.g. a CSV) to Telegram as a document."""
+    token, chat = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    if not (token and chat and os.path.exists(path)):
+        return
+    import requests
+    try:
+        with open(path, "rb") as f:
+            r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument",
+                              data={"chat_id": chat, "caption": caption[:1000]},
+                              files={"document": (os.path.basename(path), f, "text/csv")}, timeout=30)
+        print(f"[info] Telegram file {os.path.basename(path)}: {r.status_code}")
+    except Exception as e:
+        print(f"[warn] Telegram file failed: {e}")
+
+
 def whatsapp(text):
     """Free personal WhatsApp messages via CallMeBot (secrets WHATSAPP_PHONE, WHATSAPP_APIKEY)."""
     phone, key = os.getenv("WHATSAPP_PHONE"), os.getenv("WHATSAPP_APIKEY")
