@@ -2,7 +2,7 @@
 Index 15-minute pattern monitor - NIFTY 50, SENSEX, BANKNIFTY and CRUDE.
 Runs every 15 minutes from 9:15 AM to 11:45 PM IST (just after each 15-min candle closes).
 Indices: 9:15 AM - 3:30 PM. CRUDE: WTI crude futures (Yahoo CL=F, in USD) as a proxy for MCX crude,
-restricted to MCX hours 9:00 AM - 11:30 PM IST.
+restricted to MCX hours 9:00 AM - 11:30 PM IST; formations reported only from 5:00 PM.
 
 Same logic as the daily lists, on 15-minute candles:
   (a) 2-candle: GREEN candle -> next candle RED and closes below the green candle's low
@@ -29,6 +29,8 @@ INDICES = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "BANKNIFTY": "^NSEBANK", "CRUDE
 # trading hours (IST) used for each instrument: candles outside are ignored; alerts sent live until session end
 SESSION = {"CRUDE": (dt.time(9, 0), dt.time(23, 30))}
 DEFAULT_SESSION = (dt.time(9, 15), dt.time(15, 30))
+# only report formations completing at/after this time (earlier candles still count as pattern context)
+REPORT_FROM = {"CRUDE": dt.time(17, 0)}
 LOOKBACK = int(os.getenv("INDEX_LOOKBACK", "5"))
 PAGE_URL = os.getenv("PAGE_URL", "")
 COLS2 = ["date", "index", "time", "green_candle", "red_candle", "red_close"]
@@ -96,8 +98,9 @@ def main():
 
     ev2, ev3 = [], []
     for name, df in data.items():
-        ev2 += [e for e in two_candle(df, name) if e["date"] == today]
-        ev3 += [e for e in three_candle(df, name) if e["date"] == today]
+        frm = REPORT_FROM.get(name, dt.time(0, 0)).strftime("%H:%M")
+        ev2 += [e for e in two_candle(df, name) if e["date"] == today and e["time"] >= frm]
+        ev3 += [e for e in three_candle(df, name) if e["date"] == today and e["time"] >= frm]
     t2 = pd.DataFrame(ev2, columns=COLS2).sort_values(["time", "index"])
     t3 = pd.DataFrame(ev3, columns=COLS3).sort_values(["time", "index"])
 

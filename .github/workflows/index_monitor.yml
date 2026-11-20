@@ -2,9 +2,11 @@ name: Index 15-min monitor (NIFTY, SENSEX, BANKNIFTY, CRUDE)
 
 on:
   schedule:
-    - cron: "47 3 * * 1-5"             # 9:17 AM IST (first crude candle)
-    - cron: "2,17,32,47 4-17 * * 1-5"  # 9:32 AM - 11:17 PM IST, just after each 15-min candle closes
-    - cron: "2,17 18 * * 1-5"          # 11:32 PM and 11:47 PM IST (crude close, then day's files)
+    - cron: "2,17,32,47 4-9 * * 1-5"   # indices: 9:32 AM - 3:17 PM IST, just after each 15-min candle closes
+    - cron: "2 10 * * 1-5"             # indices: 3:32 PM IST (last candle)
+    - cron: "32,47 11 * * 1-5"         # crude: 5:02, 5:17 PM IST
+    - cron: "2,17,32,47 12-17 * * 1-5" # crude: 5:32 PM - 11:17 PM IST
+    - cron: "2,17 18 * * 1-5"          # crude: 11:32 PM (close) and 11:47 PM IST (day's files)
   push:
     branches: [main]
     paths: ["index_monitor.py"]
