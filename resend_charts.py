@@ -1,21 +1,19 @@
-"""Re-send the latest daily pattern charts (docs/charts/patterns) to Telegram and report the result."""
+"""Re-send the latest daily pattern charts to Telegram as one PDF and report the result."""
 import glob
 import os
 import sys
 
-from monitor import telegram, telegram_photo
+from monitor import telegram_file
+from swing_charts import make_pdf
 
 files = sorted(glob.glob("docs/charts/patterns/*.png"))
 if not files:
     print("::error::No pattern charts found")
     sys.exit(1)
-telegram(f"Today's daily pattern charts ({len(files)}) - shaded candles = the pattern.")
-ok = 0
-for p in files:
-    kind, sym = os.path.basename(p)[:-4].split("_", 1)
-    if telegram_photo(p, f"{sym} · {kind} (1-day)"):
-        ok += 1
-print(f"::notice::Sent {ok} of {len(files)} charts to Telegram")
-if ok < len(files):
-    print(f"::error::Only {ok} of {len(files)} charts were sent")
-    sys.exit(1)
+pdf = "docs/charts/patterns/daily_patterns_latest.pdf"
+make_pdf(files, pdf, f"Daily pattern charts ({len(files)} stocks)",
+         ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.", ""]
+         + [os.path.basename(p)[:-4].replace("_", "  ") for p in files])
+print(f"[info] PDF size: {os.path.getsize(pdf) / 1e6:.1f} MB")
+telegram_file(pdf, f"Daily pattern charts - {len(files)} stocks")
+print("::notice::PDF sent")
