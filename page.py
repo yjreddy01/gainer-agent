@@ -60,9 +60,13 @@ def build():
     alerts = _read_csv(f"signals/alerts_{session}.csv")
     history = _read_csv("signals/alert_history.csv")
     bt = _read_csv("signals/backtest_latest.csv")
-    dl_path = _latest("signals/daily_list_*.csv")
-    daily_list = _read_csv(dl_path) if dl_path else pd.DataFrame()
-    dl_date = os.path.basename(dl_path)[11:21] if dl_path else "–"
+    p2, p3 = _latest("signals/daily_2candle_*.csv"), _latest("signals/daily_3candle_*.csv")
+    two = _read_csv(p2) if p2 else pd.DataFrame()
+    three = _read_csv(p3) if p3 else pd.DataFrame()
+    d2 = os.path.basename(p2)[14:24] if p2 else "–"
+    d3 = os.path.basename(p3)[14:24] if p3 else "–"
+    repo = os.getenv("GITHUB_REPOSITORY", "yjreddy01/gainer-agent")
+    dl = lambda f: f"<a href='https://raw.githubusercontent.com/{repo}/main/{f}' download>download CSV</a>" if f else ""
     bts = json.load(open("signals/backtest_summary.json")) if os.path.exists("signals/backtest_summary.json") else {}
 
     if alerts.empty:
@@ -122,10 +126,14 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <h2>Qualified stocks today ({len(quals)}) — from 1h chart of {quals['qual_date'].iloc[0] if not quals.empty else '–'}</h2>
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
 
-<h2>Daily pattern list ({len(daily_list)}) — {dl_date}</h2>
-<p class="muted">3-candle daily pattern: a green candle → the next candle red, closing below its low →
-today's candle closing above the green candle's high (the green/red pair can be up to 10 sessions back).</p>
-{_table(daily_list, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"])}
+<h2>(a) Daily 2-candle formation ({len(two)}) — {d2}</h2>
+<p class="muted">Yesterday green → today red, closing below the green candle's low. {dl(p2)}</p>
+{_table(two, ["symbol", "today_close", "change_%", "green_candle", "red_candle"])}
+
+<h2>(b) Daily 3-candle formation ({len(three)}) — {d3}</h2>
+<p class="muted">Green → next candle red, closing below its low (within the last 5 sessions) → today closed above
+the green candle's high. {dl(p3)}</p>
+{_table(three, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"])}
 
 <h2>Backtest — {bts.get('days', '–')} sessions ({period})</h2>
 <div class="cards">

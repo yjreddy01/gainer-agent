@@ -133,13 +133,13 @@ def daily_qualifiers_for(daily_by_sym, prev_date, break_mode="close"):
 
 
 
-def daily_reversal_for(daily_by_sym, today, lookback=10, break_mode="close"):
+def daily_reversal_for(daily_by_sym, today, lookback=5, break_mode="close"):
     """
     3-candle daily pattern:
       1. GREEN daily candle
       2. the very next candle is RED and closes below the green candle's low
       3. TODAY's candle closes above the green candle's HIGH
-    The green/red pair can be anywhere in the last `lookback` sessions (today need not follow the
+    The red candle can be any of the last `lookback` sessions before today (today need not follow the
     red candle directly), but today must be the FIRST close above that green high since the red candle.
     """
     rows = []
@@ -149,7 +149,7 @@ def daily_reversal_for(daily_by_sym, today, lookback=10, break_mode="close"):
             continue
         last = len(d) - 1
         t = d.iloc[last]
-        for i in range(last - 1, max(0, last - lookback) , -1):    # i = red candle index (most recent first)
+        for i in range(last - 1, max(0, last - lookback - 1), -1):    # i = red candle index (most recent first)
             g, r = d.iloc[i - 1], d.iloc[i]
             if not (g["Close"] > g["Open"] and r["Close"] < r["Open"]):
                 continue
