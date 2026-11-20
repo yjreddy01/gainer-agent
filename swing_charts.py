@@ -57,7 +57,8 @@ def swings(df, k):
     return hi, lo
 
 
-def chart(sym, mcap, df, hi, lo, k, path):
+def chart(sym, mcap, df, hi, lo, k, path, highlight=None, title_extra=""):
+    """highlight: optional list of (date, label, colour) - shades those candles (e.g. the pattern candles)."""
     has_vol = "Volume" in df.columns and df["Volume"].fillna(0).sum() > 0
     if has_vol:
         fig, (ax, axv) = plt.subplots(2, 1, figsize=(13, 8), dpi=110, sharex=True,
@@ -71,6 +72,14 @@ def chart(sym, mcap, df, hi, lo, k, path):
         ax.vlines(i, l, h, color=col, linewidth=0.8)
         ax.add_patch(plt.Rectangle((i - 0.3, min(o, c)), 0.6, max(abs(c - o), 1e-9), color=col))
     rng = df["High"].max() - df["Low"].min()
+    for n, (d, label, colr) in enumerate(highlight or []):
+        pos = [j for j, ix in enumerate(df.index) if ix.date() == d]
+        if pos:
+            p = pos[0]
+            ax.axvspan(p - 0.5, p + 0.5, color=colr, alpha=0.18)
+            ax.annotate(label, (p, df["High"].iloc[p]), xytext=(0, 28 + 14 * n), textcoords="offset points",
+                        ha="center", fontsize=8, color=colr, fontweight="bold",
+                        arrowprops=dict(arrowstyle="-", color=colr, lw=0.6))
     for i in hi:
         p = df["High"].iloc[i]
         ax.plot(i, p + rng * 0.015, marker="v", color="#b91c1c", markersize=8)
@@ -111,7 +120,7 @@ def chart(sym, mcap, df, hi, lo, k, path):
     ax.grid(alpha=0.25)
     mc = f"mcap ₹{mcap / 1e12:,.2f} lakh cr · " if mcap else ""
     ax.set_title(f"{sym} — daily, swing highs ▼ / lows ▲ ({k} candles each side) · "
-                 f"{mc}last close {df['Close'].iloc[-1]:,.2f}", fontsize=11)
+                 f"{mc}last close {df['Close'].iloc[-1]:,.2f}{title_extra}", fontsize=11)
     if not has_vol:
         fig.tight_layout()
     else:

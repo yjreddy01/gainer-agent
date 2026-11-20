@@ -16,7 +16,7 @@ import os
 import sys
 
 import page
-from monitor import retry, github_issue, notify, telegram_file
+from monitor import retry, github_issue, notify, telegram_file, telegram, telegram_photo
 from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
@@ -28,7 +28,7 @@ REPO = os.getenv("GITHUB_REPOSITORY", "")
 def main():
     now = dt.datetime.now(IST)
     symbols = get_fo_symbols()
-    daily = retry(download, symbols, "1d", "3mo")
+    daily = retry(download, symbols, "1d", "6mo")
     last = max(df.index[-1].date() for df in daily.values())
     if (last != now.date() or now.time() < dt.time(15, 30)) and "--force" not in sys.argv:
         print(f"[info] Today's daily candle isn't complete (latest {last}) - nothing to do.")
@@ -83,7 +83,50 @@ def main():
         p = f"signals/index_{kind}_{last}.csv"
         if os.path.exists(p):
             telegram_file(p, f"Index 15-min {label} - {last:%d %b}")
+    send_pattern_charts(daily, last, two, three)
     page.build()
+
+
+def send_pattern_charts(daily, last, two, three, k=5):
+    """1-day chart (swing highs/lows + volume) for every stock in the 2-candle and 3-candle lists -> Telegram."""
+    import datetime as _dt
+    import shutil
+    from swing_charts import chart, swings
+    out = "docs/charts/patterns"
+    shutil.rmtree(out, ignore_errors=True)
+    os.makedirs(out, exist_ok=True)
+
+    def d_of(txt):            # "19 Nov low 123" -> date (year from `last`)
+        dd = _dt.datetime.strptime(" ".join(txt.split()[:2]) + f" {last.year}", "%d %b %Y").date()
+        return dd if dd <= last else dd.replace(year=last.year - 1)
+
+    jobs = []
+    for _, r in two.iterrows():
+        jobs.append((r["symbol"], "2-candle", [(d_of(r["green_candle"]), "green", "#16a34a"),
+                                                (last, "red", "#dc2626")],
+                     f"(a) 2-candle: green {r['green_candle']} -> today red close {r['today_close']} ({r['change_%']:+}%)"))
+    for _, r in three.iterrows():
+        jobs.append((r["symbol"], "3-candle", [(d_of(r["green_candle"]), "green", "#16a34a"),
+                                                (d_of(r["red_candle"]), "red", "#dc2626"),
+                                                (last, "break", "#2563eb")],
+                     f"(b) 3-candle: green {r['green_candle']} -> red {r['red_candle']} -> "
+                     f"today close {r['today_close']} above green high ({r['change_%']:+}%)"))
+    if not jobs:
+        return
+    telegram(f"Charts for today's daily patterns ({last:%d %b}): "
+             f"{len(two)} x 2-candle, {len(three)} x 3-candle. Shaded = pattern candles.")
+    for sym, kind, hl, cap in jobs:
+        df = daily.get(sym)
+        if df is None:
+            continue
+        df = df[df.index.date <= last].dropna().iloc[-65:]      # last ~3 months, so pattern candles are readable
+        hi, lo = swings(df, k)
+        path = f"{out}/{kind}_{sym}.png"
+        try:
+            chart(sym, 0, df, hi, lo, k, path, highlight=hl, title_extra=f" · {kind}")
+            telegram_photo(path, f"{sym} · {cap}")
+        except Exception as e:
+            print(f"[warn] chart {sym}: {e}")
 
 
 if __name__ == "__main__":
