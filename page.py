@@ -60,6 +60,9 @@ def build():
     alerts = _read_csv(f"signals/alerts_{session}.csv")
     history = _read_csv("signals/alert_history.csv")
     bt = _read_csv("signals/backtest_latest.csv")
+    dl_path = _latest("signals/daily_list_*.csv")
+    daily_list = _read_csv(dl_path) if dl_path else pd.DataFrame()
+    dl_date = os.path.basename(dl_path)[11:21] if dl_path else "–"
     bts = json.load(open("signals/backtest_summary.json")) if os.path.exists("signals/backtest_summary.json") else {}
 
     if alerts.empty:
@@ -118,6 +121,10 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 
 <h2>Qualified stocks today ({len(quals)}) — from 1h chart of {quals['qual_date'].iloc[0] if not quals.empty else '–'}</h2>
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
+
+<h2>Daily pattern list ({len(daily_list)}) — {dl_date}</h2>
+<p class="muted">F&O stocks whose daily candle was red and closed below the low of the previous green daily candle.</p>
+{_table(daily_list, ["symbol", "change_%", "green_candle", "red_candle"])}
 
 <h2>Backtest — {bts.get('days', '–')} sessions ({period})</h2>
 <div class="cards">

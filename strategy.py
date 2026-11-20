@@ -112,3 +112,22 @@ def day_triggers(m5_by_sym, day, prev_day, qual_set, top_n=10, cutoff=dt.time(14
     snapshot = {"time": C.index[-1].strftime("%H:%M"),
                 "top": [(s, round(float(g), 2), s in qual_set) for s, g in last.items()]}
     return pd.DataFrame(triggers), snapshot
+
+
+def daily_qualifiers_for(daily_by_sym, prev_date, break_mode="close"):
+    """Stocks whose DAILY candle on prev_date is RED and breaks the low of the GREEN daily candle before it."""
+    rows = []
+    for s, df in daily_by_sym.items():
+        d = df[df.index.date <= prev_date]
+        if len(d) < 2 or d.index[-1].date() != prev_date:
+            continue
+        g, r = d.iloc[-2], d.iloc[-1]
+        if not (g["Close"] > g["Open"] and r["Close"] < r["Open"]):
+            continue
+        level = r["Close"] if break_mode == "close" else r["Low"]
+        if level < g["Low"]:
+            rows.append({"symbol": s, "qual_date": prev_date,
+                         "green_candle": f"{d.index[-2].date():%d %b} low {round(float(g['Low']), 2)}",
+                         "red_candle": f"{d.index[-1].date():%d %b} close {round(float(r['Close']), 2)}"})
+    return pd.DataFrame(rows, columns=["symbol", "qual_date", "green_candle", "red_candle"])
+

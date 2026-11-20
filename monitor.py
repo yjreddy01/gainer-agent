@@ -41,7 +41,7 @@ def retry(fn, *args, tries=3, wait=15):
             time.sleep(wait)
 
 
-def github_issue(title, body):
+def github_issue(title, body, label="buy-alert"):
     token, repo = os.getenv("GITHUB_TOKEN"), os.getenv("GITHUB_REPOSITORY")
     if not (token and repo):
         print("[info] Not on GitHub Actions - skipping issue.")
@@ -50,7 +50,7 @@ def github_issue(title, body):
     r = requests.post(f"https://api.github.com/repos/{repo}/issues",
                       headers={"Authorization": f"Bearer {token}",
                                "Accept": "application/vnd.github+json"},
-                      json={"title": title, "body": body, "labels": ["buy-alert"]}, timeout=20)
+                      json={"title": title, "body": body, "labels": [label]}, timeout=20)
     print(f"[info] GitHub issue: {r.status_code}")
 
 

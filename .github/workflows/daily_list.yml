@@ -1,0 +1,44 @@
+name: Daily pattern list (after market close)
+
+on:
+  schedule:
+    - cron: "35 10 * * 1-5"       # 4:05 PM IST
+  push:                           # also runs when the scan code changes
+    branches: [main]
+    paths: ["daily_scan.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: gainer-agent
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Find stocks with the daily pattern
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python daily_scan.py
+      - name: Save results
+        run: |
+          git config user.name "gainer-agent"
+          git config user.email "actions@github.com"
+          git add docs signals
+          git diff --cached --quiet && exit 0
+          git commit -m "Daily list $(TZ=Asia/Kolkata date +'%F')"
+          git pull --rebase -X theirs origin main && git push
