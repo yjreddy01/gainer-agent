@@ -8,7 +8,7 @@ File (b)  signals/daily_3candle_<date>.csv  - 3-candle formation:
     candle's high. The red candle can be any of the last LOOKBACK (default 5) sessions before today;
     today must be the first close above that green high.
 
-Both lists go out in one GitHub issue (email / GitHub app), Telegram if configured, and the web page.
+Both lists (and the CSV files) go out in one GitHub issue (email / GitHub app), Telegram if configured, and the web page.
 """
 
 import datetime as dt
