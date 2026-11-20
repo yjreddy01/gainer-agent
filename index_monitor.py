@@ -1,6 +1,8 @@
 """
-Index 15-minute pattern monitor - NIFTY 50, SENSEX, BANKNIFTY.
-Runs every 15 minutes from 9:30 AM to 3:30 PM IST (just after each 15-min candle closes).
+Index 15-minute pattern monitor - NIFTY 50, SENSEX, BANKNIFTY and CRUDE.
+Runs every 15 minutes from 9:15 AM to 11:45 PM IST (just after each 15-min candle closes).
+Indices: 9:15 AM - 3:30 PM. CRUDE: WTI crude futures (Yahoo CL=F, in USD) as a proxy for MCX crude,
+restricted to MCX hours 9:00 AM - 11:30 PM IST.
 
 Same logic as the daily lists, on 15-minute candles:
   (a) 2-candle: GREEN candle -> next candle RED and closes below the green candle's low
@@ -20,10 +22,13 @@ import pandas as pd
 import yfinance as yf
 
 import page
-from monitor import retry, github_issue, notify
+from monitor import retry, github_issue, notify, telegram_file
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
-INDICES = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "BANKNIFTY": "^NSEBANK"}
+INDICES = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "BANKNIFTY": "^NSEBANK", "CRUDE": "CL=F"}
+# trading hours (IST) used for each instrument: candles outside are ignored; alerts sent live until session end
+SESSION = {"CRUDE": (dt.time(9, 0), dt.time(23, 30))}
+DEFAULT_SESSION = (dt.time(9, 15), dt.time(15, 30))
 LOOKBACK = int(os.getenv("INDEX_LOOKBACK", "5"))
 PAGE_URL = os.getenv("PAGE_URL", "")
 COLS2 = ["date", "index", "time", "green_candle", "red_candle", "red_close"]
@@ -40,6 +45,9 @@ def download_indices(now):
             df.columns = df.columns.get_level_values(0)
         df.index = df.index.tz_convert("Asia/Kolkata") if df.index.tz else df.index.tz_localize("Asia/Kolkata")
         df = df[["Open", "High", "Low", "Close"]].dropna()
+        start, end = SESSION.get(name, DEFAULT_SESSION)
+        t = df.index.time
+        df = df[(t >= start) & (t < end) & (df.index.weekday < 5)]
         out[name] = df[df.index + pd.Timedelta(minutes=15) <= pd.Timestamp(now)]   # completed candles only
     return out
 
@@ -81,7 +89,7 @@ def main():
         print("[info] Weekend - nothing to do.")
         return
     data = retry(download_indices, now)
-    today = max(df.index[-1].date() for df in data.values() if not df.empty)
+    today = max(df.index[-1].date() for df in data.values() if not df.empty) if data else None
     if today != now.date():
         print(f"[info] No session today ({now.date()}) - market holiday.")
         return
@@ -106,9 +114,18 @@ def main():
 
     owner = os.getenv("GITHUB_REPOSITORY_OWNER", "")
     mention = f"@{owner}\n\n" if owner else ""
-    market_open = now.time() <= dt.time(15, 35)
+    backfill = os.getenv("GITHUB_EVENT_NAME") == "push"     # code update run: summarise, don't spam
 
-    if market_open:
+    def live(name):           # still within (or just after) this instrument's session -> per-event alerts
+        end = SESSION.get(name, DEFAULT_SESSION)[1]
+        return not backfill and now.time() <= (dt.datetime.combine(today, end) + dt.timedelta(minutes=20)).time()
+
+    late2 = new2[[not live(n) for n in new2["index"]]]
+    late3 = new3[[not live(n) for n in new3["index"]]]
+    new2 = new2[[live(n) for n in new2["index"]]]
+    new3 = new3[[live(n) for n in new3["index"]]]
+
+    if True:  # live alerts, one per formation
         for _, e in new2.iterrows():
             github_issue(f"[{e['index']} 15m] 2-candle: red closed below green low · {e['time']} · {today:%d %b}",
                          f"{mention}**{e['index']}** 15-min: green candle {e['green_candle']} → next candle "
@@ -123,7 +140,7 @@ def main():
                          "index-15m")
             notify(f"[{e['index']} 15m] 3-candle at {e['time']}: closed {e['close']} above green high "
                    f"({e['green_candle']})", "index")
-    elif len(new2) or len(new3):
+    if len(late2) or len(late3):
         def lines(df, cols):
             return "\n".join("| " + " | ".join(str(r[c]) for c in cols) + " |" for _, r in df.iterrows())
         body = (f"{mention}Formations on 15-min candles today (summary sent after market close).\n\n"
@@ -133,6 +150,12 @@ def main():
                 f"|---|---|---|---|---|---|\n{lines(t3, ['index', 'time', 'green_candle', 'red_candle', 'close', 'candles_since_red'])}"
                 f"\n\n{PAGE_URL}")
         github_issue(f"[Index 15m] {today:%d %b} summary · 2-candle: {len(t2)} · 3-candle: {len(t3)}", body, "index-15m")
+    # after crude's session ends, send the day's full files to Telegram once
+    flag = f"signals/.index_files_sent_{today}"
+    if now.time() >= dt.time(23, 30) and not os.path.exists(flag):
+        telegram_file(f2, f"Index + Crude 15-min 2-candle - {today:%d %b} - {len(t2)} formations")
+        telegram_file(f3, f"Index + Crude 15-min 3-candle - {today:%d %b} - {len(t3)} formations")
+        open(flag, "w").write("sent")
     page.build()
 
 

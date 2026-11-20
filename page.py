@@ -130,7 +130,8 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <h2>Qualified stocks today ({len(quals)}) — from 1h chart of {quals['qual_date'].iloc[0] if not quals.empty else '–'}</h2>
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
 
-<h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY ({di})</h2>
+<h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY, CRUDE ({di})</h2>
+<p class="muted">CRUDE = WTI crude futures (CL=F, USD) as a proxy for MCX crude, 9:00 AM – 11:30 PM IST.</p>
 <p class="muted"><b>(a) 2-candle</b> ({len(idx2)}): green 15-min candle → next candle red, closing below its low. {dl(i2)}</p>
 {_table(idx2, ["index", "time", "green_candle", "red_close"])}
 <p class="muted"><b>(b) 3-candle</b> ({len(idx3)}): green → next red breaks its low → within 5 candles a close above the
