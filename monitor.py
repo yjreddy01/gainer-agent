@@ -59,10 +59,51 @@ def telegram(text):
     if not (token and chat):
         return
     import requests
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      data={"chat_id": chat, "text": text, "disable_web_page_preview": True},
-                      timeout=20)
-    print(f"[info] Telegram: {r.status_code}")
+    try:
+        r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                          data={"chat_id": chat, "text": text, "disable_web_page_preview": True}, timeout=20)
+        print(f"[info] Telegram: {r.status_code}")
+    except Exception as e:
+        print(f"[warn] Telegram failed: {e}")
+
+
+def whatsapp(text):
+    """Free personal WhatsApp messages via CallMeBot (secrets WHATSAPP_PHONE, WHATSAPP_APIKEY)."""
+    phone, key = os.getenv("WHATSAPP_PHONE"), os.getenv("WHATSAPP_APIKEY")
+    if not (phone and key):
+        return
+    import requests
+    try:
+        r = requests.get("https://api.callmebot.com/whatsapp.php",
+                         params={"phone": phone, "text": text, "apikey": key}, timeout=30)
+        print(f"[info] WhatsApp: {r.status_code}")
+        time.sleep(3)                      # free service - space messages out
+    except Exception as e:
+        print(f"[warn] WhatsApp failed: {e}")
+
+
+def sms(text):
+    """SMS via Fast2SMS Quick SMS route (secrets FAST2SMS_API_KEY, SMS_NUMBER). Paid per message."""
+    key, number = os.getenv("FAST2SMS_API_KEY"), os.getenv("SMS_NUMBER")
+    if not (key and number):
+        return
+    import requests
+    try:
+        r = requests.get("https://www.fast2sms.com/dev/bulkV2",
+                         params={"authorization": key, "route": "q", "message": text[:300],
+                                 "numbers": number.replace("+91", "").strip(), "flash": "0"}, timeout=30)
+        print(f"[info] SMS: {r.status_code} {r.text[:120]}")
+    except Exception as e:
+        print(f"[warn] SMS failed: {e}")
+
+
+def notify(text, kind):
+    """Send an alert to every configured channel. kind: buy | daily | index.
+    SMS costs money per message, so it only goes for the kinds listed in SMS_KINDS (default: buy,daily)."""
+    telegram(text)
+    whatsapp(text)
+    if kind in os.getenv("SMS_KINDS", "buy,daily").replace(" ", "").split(","):
+        sms(text)
 
 
 def main():
@@ -111,8 +152,8 @@ def main():
                 f"- Qualified on {prev:%d %b} 1h chart: green {q['green_candle']} broken by red {q['red_candle']}\n\n"
                 f"{PAGE_URL}")
         github_issue(title, body)
-        telegram(f"BUY {t['symbol']} future at {t['time']} — price {t['entry']} "
-                 f"(> first 5-min high {t['first5_high']}), gainer #{t['rank']} +{t['gain_%']}%\n{PAGE_URL}")
+        notify(f"BUY {t['symbol']} future at {t['time']} - price {t['entry']} "
+               f"(> first 5-min high {t['first5_high']}), gainer #{t['rank']} +{t['gain_%']}%\n{PAGE_URL}", "buy")
     if not new.empty:
         new = new.astype({"rank": int})
         (new if old.empty else pd.concat([old, new], ignore_index=True)[new.columns]).to_csv(apath, index=False)

@@ -20,7 +20,7 @@ import pandas as pd
 import yfinance as yf
 
 import page
-from monitor import retry, github_issue, telegram
+from monitor import retry, github_issue, notify
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 INDICES = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "BANKNIFTY": "^NSEBANK"}
@@ -113,16 +113,16 @@ def main():
             github_issue(f"[{e['index']} 15m] 2-candle: red closed below green low · {e['time']} · {today:%d %b}",
                          f"{mention}**{e['index']}** 15-min: green candle {e['green_candle']} → next candle "
                          f"**red, closed {e['red_close']}**, below the green candle's low.\n\n{PAGE_URL}", "index-15m")
-            telegram(f"[{e['index']} 15m] 2-candle at {e['time']}: red closed {e['red_close']} below green low "
-                     f"({e['green_candle']})")
+            notify(f"[{e['index']} 15m] 2-candle at {e['time']}: red closed {e['red_close']} below green low "
+                   f"({e['green_candle']})", "index")
         for _, e in new3.iterrows():
             github_issue(f"[{e['index']} 15m] 3-candle: closed above green high · {e['time']} · {today:%d %b}",
                          f"{mention}**{e['index']}** 15-min: green candle {e['green_candle']} → red candle "
                          f"{e['red_candle']} broke its low → **{e['time']} candle closed {e['close']}, above the "
                          f"green candle's high** ({e['candles_since_red']} candles after the red).\n\n{PAGE_URL}",
                          "index-15m")
-            telegram(f"[{e['index']} 15m] 3-candle at {e['time']}: closed {e['close']} above green high "
-                     f"({e['green_candle']})")
+            notify(f"[{e['index']} 15m] 3-candle at {e['time']}: closed {e['close']} above green high "
+                   f"({e['green_candle']})", "index")
     elif len(new2) or len(new3):
         def lines(df, cols):
             return "\n".join("| " + " | ".join(str(r[c]) for c in cols) + " |" for _, r in df.iterrows())

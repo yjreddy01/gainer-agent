@@ -16,7 +16,7 @@ import os
 import sys
 
 import page
-from monitor import retry, github_issue, telegram
+from monitor import retry, github_issue, notify
 from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
@@ -74,8 +74,8 @@ def main():
                        ["Stock", "Today's close", "Today %", "Green candle (H / L)", "Red candle", "Days since red"]) +
             f"\n\n{PAGE_URL}")
     github_issue(title, body, "daily-list")
-    telegram(f"[Daily] {last:%d %b}\n(a) 2-candle ({len(two)}): {', '.join(two['symbol']) or '-'}\n"
-             f"(b) 3-candle ({len(three)}): {', '.join(three['symbol']) or '-'}" + (f"\n{PAGE_URL}" if PAGE_URL else ""))
+    notify(f"[Daily] {last:%d %b}\n(a) 2-candle ({len(two)}): {', '.join(two['symbol']) or '-'}\n"
+           f"(b) 3-candle ({len(three)}): {', '.join(three['symbol']) or '-'}" + (f"\n{PAGE_URL}" if PAGE_URL else ""), "daily")
     page.build()
 
 
