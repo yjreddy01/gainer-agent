@@ -1,0 +1,36 @@
+name: Swing charts (top 5 Nifty stocks)
+
+on:
+  push:
+    branches: [main]
+    paths: ["swing_charts.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gainer-agent
+  cancel-in-progress: false
+
+jobs:
+  charts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Draw swing charts
+        run: python swing_charts.py
+      - name: Save results
+        run: |
+          git config user.name "gainer-agent"
+          git config user.email "actions@github.com"
+          git add docs signals
+          git diff --cached --quiet && exit 0
+          git commit -m "Swing charts $(TZ=Asia/Kolkata date +'%F')"
+          git pull --rebase -X theirs origin main && git push

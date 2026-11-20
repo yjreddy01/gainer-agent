@@ -73,6 +73,12 @@ def build():
     idxs = _read_csv(isf) if isf else pd.DataFrame()
     repo = os.getenv("GITHUB_REPOSITORY", "yjreddy01/gainer-agent")
     dl = lambda f: f"<a href='https://raw.githubusercontent.com/{repo}/main/{f}' download>download CSV</a>" if f else ""
+    sw = _read_csv("signals/swing_summary.csv")
+    charts_html = "".join(
+        f"<h3 style='font-size:15px;margin:18px 0 6px'>#{r['rank']} {html.escape(str(r['symbol']))} · last swing high "
+        f"{r['last_swing_high']} ({r['last_swing_high_date']}) · last swing low {r['last_swing_low']} ({r['last_swing_low_date']})</h3>"
+        f"<img src='charts/{html.escape(str(r['symbol']))}.png' style='width:100%;border:1px solid #e5e7eb;border-radius:8px'>"
+        for _, r in sw.iterrows()) if not sw.empty else "<p class='muted'>Not generated yet.</p>"
     bts = json.load(open("signals/backtest_summary.json")) if os.path.exists("signals/backtest_summary.json") else {}
 
     if alerts.empty:
@@ -131,6 +137,10 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 
 <h2>Qualified stocks today ({len(quals)}) — from 1h chart of {quals['qual_date'].iloc[0] if not quals.empty else '–'}</h2>
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
+
+<h2>Swing highs & lows — top 5 Nifty stocks by market cap (daily)</h2>
+<p class="muted">Swing high ▼ = highest high of 5 candles on each side; swing low ▲ = lowest low of 5 candles on each side.</p>
+{charts_html}
 
 <h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY, CRUDE ({di})</h2>
 <p class="muted">CRUDE = WTI crude futures (CL=F, USD) as a proxy for MCX crude; formations reported 5:00 PM – 11:30 PM IST.</p>
