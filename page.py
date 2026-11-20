@@ -65,6 +65,10 @@ def build():
     three = _read_csv(p3) if p3 else pd.DataFrame()
     d2 = os.path.basename(p2)[14:24] if p2 else "–"
     d3 = os.path.basename(p3)[14:24] if p3 else "–"
+    i2, i3 = _latest("signals/index_2candle_*.csv"), _latest("signals/index_3candle_*.csv")
+    idx2 = _read_csv(i2) if i2 else pd.DataFrame()
+    idx3 = _read_csv(i3) if i3 else pd.DataFrame()
+    di = os.path.basename(i2)[14:24] if i2 else "–"
     repo = os.getenv("GITHUB_REPOSITORY", "yjreddy01/gainer-agent")
     dl = lambda f: f"<a href='https://raw.githubusercontent.com/{repo}/main/{f}' download>download CSV</a>" if f else ""
     bts = json.load(open("signals/backtest_summary.json")) if os.path.exists("signals/backtest_summary.json") else {}
@@ -125,6 +129,13 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 
 <h2>Qualified stocks today ({len(quals)}) — from 1h chart of {quals['qual_date'].iloc[0] if not quals.empty else '–'}</h2>
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
+
+<h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY ({di})</h2>
+<p class="muted"><b>(a) 2-candle</b> ({len(idx2)}): green 15-min candle → next candle red, closing below its low. {dl(i2)}</p>
+{_table(idx2, ["index", "time", "green_candle", "red_close"])}
+<p class="muted"><b>(b) 3-candle</b> ({len(idx3)}): green → next red breaks its low → within 5 candles a close above the
+green candle's high. {dl(i3)}</p>
+{_table(idx3, ["index", "time", "green_candle", "red_candle", "close", "candles_since_red"])}
 
 <h2>(a) Daily 2-candle formation ({len(two)}) — {d2}</h2>
 <p class="muted">Yesterday green → today red, closing below the green candle's low. {dl(p2)}</p>
