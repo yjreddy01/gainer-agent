@@ -20,7 +20,7 @@
  .scroll{overflow-x:auto}
 </style></head><body><div class="wrap">
 <h1>Top-Gainer Break Agent</h1>
-<div class="muted">Updated 20 Nov 2026, 18:21 IST · Session – · last 5-min candle –</div>
+<div class="muted">Updated 20 Nov 2026, 18:34 IST · Session – · last 5-min candle –</div>
 
 <div class="rule" style="margin-top:14px"><b>Rule:</b> (1) Qualified = on yesterday's 1-hour chart, a red candle broke the low of the
 green candle right before it (closed below it). (2) Today, BUY the stock future when a qualified stock is in the
@@ -35,14 +35,21 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 <h2>Qualified stocks today (0) — from 1h chart of –</h2>
 <p class='muted'>None.</p>
 
-<h2>(a) Daily 2-candle formation (0) — –</h2>
-<p class="muted">Yesterday green → today red, closing below the green candle's low. </p>
-<p class='muted'>None.</p>
+<h2>Index 15-min formations — NIFTY, SENSEX, BANKNIFTY (2026-11-20)</h2>
+<p class="muted"><b>(a) 2-candle</b> (3): green 15-min candle → next candle red, closing below its low. <a href='https://raw.githubusercontent.com/yjreddy01/gainer-agent/main/signals/index_2candle_2026-11-20.csv' download>download CSV</a></p>
+<div class='scroll'><table><thead><tr><th>index</th><th>time</th><th>green_candle</th><th>red_close</th></tr></thead><tbody><tr><td>NIFTY</td><td>13:15</td><td>20 Nov 13:00 L 25706.80</td><td>25696.05</td></tr><tr><td>SENSEX</td><td>13:15</td><td>20 Nov 13:00 L 83671.72</td><td>83656.49</td></tr><tr><td>BANKNIFTY</td><td>14:30</td><td>20 Nov 14:15 L 64533.05</td><td>64519.2</td></tr></tbody></table></div>
+<p class="muted"><b>(b) 3-candle</b> (3): green → next red breaks its low → within 5 candles a close above the
+green candle's high. <a href='https://raw.githubusercontent.com/yjreddy01/gainer-agent/main/signals/index_3candle_2026-11-20.csv' download>download CSV</a></p>
+<div class='scroll'><table><thead><tr><th>index</th><th>time</th><th>green_candle</th><th>red_candle</th><th>close</th><th>candles_since_red</th></tr></thead><tbody><tr><td>NIFTY</td><td>13:45</td><td>20 Nov 13:00 H 25743.70 / L 25706.80</td><td>20 Nov 13:15 close 25696.05</td><td>25744.95</td><td>2</td></tr><tr><td>SENSEX</td><td>14:00</td><td>20 Nov 13:00 H 83823.74 / L 83671.72</td><td>20 Nov 13:15 close 83656.49</td><td>83886.99</td><td>3</td></tr><tr><td>BANKNIFTY</td><td>15:00</td><td>20 Nov 14:15 H 64636.30 / L 64533.05</td><td>20 Nov 14:30 close 64519.20</td><td>64639.95</td><td>2</td></tr></tbody></table></div>
 
-<h2>(b) Daily 3-candle formation (0) — –</h2>
+<h2>(a) Daily 2-candle formation (4) — 2026-11-20</h2>
+<p class="muted">Yesterday green → today red, closing below the green candle's low. <a href='https://raw.githubusercontent.com/yjreddy01/gainer-agent/main/signals/daily_2candle_2026-11-20.csv' download>download CSV</a></p>
+<div class='scroll'><table><thead><tr><th>symbol</th><th>today_close</th><th>change_%</th><th>green_candle</th><th>red_candle</th></tr></thead><tbody><tr><td>GVT&amp;D</td><td>4235.0</td><td>-2.63</td><td>19 Nov low 4282.7</td><td>20 Nov close 4235.0</td></tr><tr><td>ENRIN</td><td>2944.0</td><td>-2.19</td><td>19 Nov low 2946.7</td><td>20 Nov close 2944.0</td></tr><tr><td>PIIND</td><td>1597.4</td><td>-2.0</td><td>19 Nov low 1612.5</td><td>20 Nov close 1597.4</td></tr><tr><td>IEX</td><td>113.15</td><td>-1.75</td><td>19 Nov low 114.28</td><td>20 Nov close 113.15</td></tr></tbody></table></div>
+
+<h2>(b) Daily 3-candle formation (11) — 2026-11-20</h2>
 <p class="muted">Green → next candle red, closing below its low (within the last 5 sessions) → today closed above
-the green candle's high. </p>
-<p class='muted'>None.</p>
+the green candle's high. <a href='https://raw.githubusercontent.com/yjreddy01/gainer-agent/main/signals/daily_3candle_2026-11-20.csv' download>download CSV</a></p>
+<div class='scroll'><table><thead><tr><th>symbol</th><th>today_close</th><th>change_%</th><th>green_candle</th><th>red_candle</th><th>days_since_red</th></tr></thead><tbody><tr><td>CUB</td><td>248.8</td><td>6.25</td><td>12 Nov H 239.0 / L 232.52</td><td>13 Nov close 232.4</td><td>5</td></tr><tr><td>PNBHOUSING</td><td>1191.3</td><td>3.21</td><td>12 Nov H 1157.5 / L 1120.0</td><td>13 Nov close 1117.3</td><td>5</td></tr><tr><td>ICICIGI</td><td>1736.0</td><td>2.84</td><td>17 Nov H 1707.0 / L 1685.1</td><td>18 Nov close 1646.5</td><td>2</td></tr><tr><td>INDHOTEL</td><td>912.0</td><td>2.51</td><td>17 Nov H 909.65 / L 884.95</td><td>18 Nov close 875.05</td><td>2</td></tr><tr><td>FEDERALBNK</td><td>373.5</td><td>2.47</td><td>17 Nov H 366.6 / L 361.8</td><td>18 Nov close 360.35</td><td>2</td></tr><tr><td>FORTIS</td><td>825.0</td><td>1.87</td><td>17 Nov H 812.0 / L 797.45</td><td>18 Nov close 793.55</td><td>2</td></tr><tr><td>TORNTPHARM</td><td>4689.5</td><td>1.7</td><td>17 Nov H 4686.5 / L 4626.5</td><td>18 Nov close 4610.7</td><td>2</td></tr><tr><td>HINDPETRO</td><td>396.35</td><td>1.63</td><td>17 Nov H 395.3 / L 388.3</td><td>18 Nov close 386.45</td><td>2</td></tr><tr><td>SBICARD</td><td>579.25</td><td>1.15</td><td>17 Nov H 578.5 / L 570.1</td><td>18 Nov close 561.5</td><td>2</td></tr><tr><td>MOTHERSON</td><td>166.53</td><td>0.66</td><td>17 Nov H 165.49 / L 162.38</td><td>18 Nov close 157.24</td><td>2</td></tr><tr><td>INDIANB</td><td>950.0</td><td>0.32</td><td>12 Nov H 948.4 / L 933.1</td><td>13 Nov close 932.85</td><td>5</td></tr></tbody></table></div>
 
 <h2>Backtest — 20 sessions (2026-10-23 → 2026-11-20)</h2>
 <div class="cards">
