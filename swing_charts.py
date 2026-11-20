@@ -10,6 +10,8 @@ Swing high / swing low charts for the TOP 5 Nifty 50 stocks by market capitalisa
 Also lists the 5 F&O stocks whose close is nearest ABOVE their latest swing low (within 3%),
 with charts -> docs/charts/near/, signals/near_swing_low.csv, and Telegram.
 
+Charts include a volume panel (green/red bars + 20-day average).
+
 Usage: python swing_charts.py [--swing 5] [--months 6] [--top 5]
 """
 
@@ -19,6 +21,7 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 import pandas as pd
 import yfinance as yf
 
@@ -55,7 +58,12 @@ def swings(df, k):
 
 
 def chart(sym, mcap, df, hi, lo, k, path):
-    fig, ax = plt.subplots(figsize=(13, 6.5), dpi=110)
+    has_vol = "Volume" in df.columns and df["Volume"].fillna(0).sum() > 0
+    if has_vol:
+        fig, (ax, axv) = plt.subplots(2, 1, figsize=(13, 8), dpi=110, sharex=True,
+                                      gridspec_kw={"height_ratios": [3, 1], "hspace": 0.05})
+    else:
+        fig, ax = plt.subplots(figsize=(13, 6.5), dpi=110)
     x = range(len(df))
     up = df["Close"] >= df["Open"]
     for i, (o, h, l, c) in enumerate(df[["Open", "High", "Low", "Close"]].itertuples(index=False)):
@@ -85,6 +93,17 @@ def chart(sym, mcap, df, hi, lo, k, path):
         ax.axhline(l, color="#15803d", linestyle="--", linewidth=0.9, alpha=0.7)
         ax.text(len(df) - 0.5, l, f" last swing low {l:,.1f}", va="top", ha="right", fontsize=9, color="#15803d")
     step = max(1, len(df) // 10)
+    if has_vol:
+        cols = ["#16a34a" if c >= o else "#dc2626" for o, c in zip(df["Open"], df["Close"])]
+        axv.bar(list(x), df["Volume"], color=cols, width=0.7, alpha=0.8)
+        axv.plot(list(x), df["Volume"].rolling(20).mean(), color="#2563eb", linewidth=1.2, label="20-day avg volume")
+        axv.legend(loc="upper left", fontsize=8, frameon=False)
+        axv.set_ylabel("Volume", fontsize=9)
+        axv.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
+            lambda v, _: f"{v / 1e7:.1f} Cr" if v >= 1e7 else f"{v / 1e5:.0f} L"))
+        axv.grid(alpha=0.25)
+        axv.set_xticks(list(x)[::step])
+        axv.set_xticklabels([d.strftime("%d %b") for d in df.index[::step]], fontsize=9)
     ax.set_xticks(list(x)[::step])
     ax.set_xticklabels([d.strftime("%d %b") for d in df.index[::step]], fontsize=9)
     ax.set_xlim(-1, len(df) + 1)
@@ -93,7 +112,10 @@ def chart(sym, mcap, df, hi, lo, k, path):
     mc = f"mcap ₹{mcap / 1e12:,.2f} lakh cr · " if mcap else ""
     ax.set_title(f"{sym} — daily, swing highs ▼ / lows ▲ ({k} candles each side) · "
                  f"{mc}last close {df['Close'].iloc[-1]:,.2f}", fontsize=11)
-    fig.tight_layout()
+    if not has_vol:
+        fig.tight_layout()
+    else:
+        fig.subplots_adjust(left=0.06, right=0.98, top=0.95, bottom=0.06)
     fig.savefig(path)
     plt.close(fig)
 
@@ -104,7 +126,7 @@ def near_swing_low(k, months, n=5, max_pct=3.0):
     data = download(get_fo_symbols(), "1d", f"{months}mo")
     rows = []
     for s, df in data.items():
-        df = df[["Open", "High", "Low", "Close"]].dropna()
+        df = df.dropna()
         if len(df) < 2 * k + 5:
             continue
         hi, lo = swings(df, k)
@@ -137,7 +159,7 @@ def main():
         df = yf.download(s + ".NS", period=f"{a.months}mo", interval="1d", auto_adjust=False, progress=False)
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
-        df = df[["Open", "High", "Low", "Close"]].dropna()
+        df = df[[c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]].dropna()
         hi, lo = swings(df, a.swing)
         chart(s, mc, df, hi, lo, a.swing, f"docs/charts/{s}.png")
         pts = ([{"date": df.index[i].date(), "type": "swing high", "price": round(float(df["High"].iloc[i]), 2)} for i in hi] +

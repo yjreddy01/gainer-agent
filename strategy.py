@@ -41,7 +41,8 @@ def download(symbols, interval, period):
         except (KeyError, TypeError):
             continue
         if not df.empty:
-            out[s] = to_ist(df[["Open", "High", "Low", "Close"]].copy())
+            cols = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
+            out[s] = to_ist(df[cols].copy())
     return out
 
 
