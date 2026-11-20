@@ -1,0 +1,26 @@
+{
+ "days": 20,
+ "from": "2026-10-23",
+ "to": "2026-11-20",
+ "qualified": {
+  "trades": 243,
+  "wins": 131,
+  "win_rate": 53.9,
+  "avg_return": 0.25,
+  "total_return": 60.12
+ },
+ "not_qualified": {
+  "trades": 222,
+  "wins": 134,
+  "win_rate": 60.4,
+  "avg_return": 0.6,
+  "total_return": 132.25
+ },
+ "all": {
+  "trades": 465,
+  "wins": 265,
+  "win_rate": 57.0,
+  "avg_return": 0.41,
+  "total_return": 192.37
+ }
+}
