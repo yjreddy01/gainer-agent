@@ -1,6 +1,8 @@
 name: Swing charts (top 5 Nifty stocks)
 
 on:
+  schedule:
+    - cron: "48 10 * * 1-5"        # 4:18 PM IST, after market close
   push:
     branches: [main]
     paths: ["swing_charts.py"]
@@ -24,7 +26,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Draw swing charts
+      - name: Draw swing charts and send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python swing_charts.py
       - name: Save results
         run: |

@@ -92,6 +92,22 @@ def telegram_file(path, caption=""):
         print(f"[warn] Telegram file failed: {e}")
 
 
+def telegram_photo(path, caption=""):
+    """Send an image (chart) to Telegram."""
+    token, chat = tg_creds()
+    if not (token and chat and os.path.exists(path)):
+        return
+    import requests
+    try:
+        with open(path, "rb") as f:
+            r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
+                              data={"chat_id": chat, "caption": caption[:1000]},
+                              files={"photo": (os.path.basename(path), f, "image/png")}, timeout=60)
+        print(f"[info] Telegram photo {os.path.basename(path)}: {r.status_code}")
+    except Exception as e:
+        print(f"[warn] Telegram photo failed: {e}")
+
+
 def whatsapp(text):
     """Free personal WhatsApp messages via CallMeBot (secrets WHATSAPP_PHONE, WHATSAPP_APIKEY)."""
     phone, key = os.getenv("WHATSAPP_PHONE"), os.getenv("WHATSAPP_APIKEY")
