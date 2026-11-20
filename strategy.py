@@ -131,3 +131,41 @@ def daily_qualifiers_for(daily_by_sym, prev_date, break_mode="close"):
                          "red_candle": f"{d.index[-1].date():%d %b} close {round(float(r['Close']), 2)}"})
     return pd.DataFrame(rows, columns=["symbol", "qual_date", "green_candle", "red_candle"])
 
+
+
+def daily_reversal_for(daily_by_sym, today, lookback=10, break_mode="close"):
+    """
+    3-candle daily pattern:
+      1. GREEN daily candle
+      2. the very next candle is RED and closes below the green candle's low
+      3. TODAY's candle closes above the green candle's HIGH
+    The green/red pair can be anywhere in the last `lookback` sessions (today need not follow the
+    red candle directly), but today must be the FIRST close above that green high since the red candle.
+    """
+    rows = []
+    for s, df in daily_by_sym.items():
+        d = df[df.index.date <= today]
+        if len(d) < 3 or d.index[-1].date() != today:
+            continue
+        last = len(d) - 1
+        t = d.iloc[last]
+        for i in range(last - 1, max(0, last - lookback) , -1):    # i = red candle index (most recent first)
+            g, r = d.iloc[i - 1], d.iloc[i]
+            if not (g["Close"] > g["Open"] and r["Close"] < r["Open"]):
+                continue
+            level = r["Close"] if break_mode == "close" else r["Low"]
+            if not level < g["Low"]:
+                continue
+            between = d.iloc[i + 1:last]
+            if (between["Close"] > g["High"]).any():
+                continue                                  # green high already broken earlier
+            if t["Close"] > g["High"]:
+                rows.append({"symbol": s, "date": today,
+                             "green_candle": f"{d.index[i - 1].date():%d %b} H {round(float(g['High']), 2)} / L {round(float(g['Low']), 2)}",
+                             "red_candle": f"{d.index[i].date():%d %b} close {round(float(r['Close']), 2)}",
+                             "today_close": round(float(t["Close"]), 2),
+                             "change_%": round(float(t["Close"] / d.iloc[last - 1]["Close"] - 1) * 100, 2),
+                             "days_since_red": last - i})
+            break                                         # only the most recent green/red pair
+    return pd.DataFrame(rows, columns=["symbol", "date", "green_candle", "red_candle",
+                                       "today_close", "change_%", "days_since_red"])

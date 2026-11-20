@@ -123,8 +123,9 @@ green candle right before it (closed below it). (2) Today, BUY the stock future 
 {_table(quals, ["symbol", "green_candle", "red_candle"])}
 
 <h2>Daily pattern list ({len(daily_list)}) — {dl_date}</h2>
-<p class="muted">F&O stocks whose daily candle was red and closed below the low of the previous green daily candle.</p>
-{_table(daily_list, ["symbol", "change_%", "green_candle", "red_candle"])}
+<p class="muted">3-candle daily pattern: a green candle → the next candle red, closing below its low →
+today's candle closing above the green candle's high (the green/red pair can be up to 10 sessions back).</p>
+{_table(daily_list, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"])}
 
 <h2>Backtest — {bts.get('days', '–')} sessions ({period})</h2>
 <div class="cards">
