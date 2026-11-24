@@ -3,24 +3,24 @@
  "from": "2026-10-26",
  "to": "2026-11-23",
  "qualified": {
-  "trades": 158,
-  "wins": 86,
-  "win_rate": 54.4,
-  "avg_return": 0.16,
-  "total_return": 25.26
+  "trades": 151,
+  "wins": 80,
+  "win_rate": 53.0,
+  "avg_return": 0.06,
+  "total_return": 8.47
  },
  "not_qualified": {
-  "trades": 324,
-  "wins": 182,
+  "trades": 331,
+  "wins": 186,
   "win_rate": 56.2,
-  "avg_return": 0.48,
-  "total_return": 155.73
+  "avg_return": 0.4,
+  "total_return": 132.92
  },
  "all": {
   "trades": 482,
-  "wins": 268,
-  "win_rate": 55.6,
-  "avg_return": 0.38,
-  "total_return": 180.99
+  "wins": 266,
+  "win_rate": 55.2,
+  "avg_return": 0.29,
+  "total_return": 141.39
  }
 }
