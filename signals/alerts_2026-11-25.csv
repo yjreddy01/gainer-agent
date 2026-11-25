@@ -1,0 +1,5 @@
+date,time,symbol,rank,gain_%,entry,first5_high,qualified
+2026-11-25,09:20,HDFCLIFE,5,3.34,594.15,594.0,True
+2026-11-25,09:35,SBICARD,7,3.69,596.4,587.85,True
+2026-11-25,09:35,DABUR,10,3.26,412.0,408.05,True
+2026-11-25,09:50,ICICIBANK,5,3.8,1645.7,1640.4,True
