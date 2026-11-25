@@ -65,6 +65,9 @@ def build():
     three = _read_csv(p3) if p3 else pd.DataFrame()
     d2 = os.path.basename(p2)[14:24] if p2 else "–"
     d3 = os.path.basename(p3)[14:24] if p3 else "–"
+    ps = _latest("signals/daily_short_*.csv")
+    dshort = _read_csv(ps) if ps else pd.DataFrame()
+    dsd = os.path.basename(ps)[12:22] if ps else "–"
     i2, i3 = _latest("signals/index_2candle_*.csv"), _latest("signals/index_3candle_*.csv")
     idx2 = _read_csv(i2) if i2 else pd.DataFrame()
     idx3 = _read_csv(i3) if i3 else pd.DataFrame()
@@ -164,6 +167,11 @@ green candle's high. {dl(i3)}</p>
 <p class="muted">Green → next candle red, closing below its low (within the last 5 sessions) → today closed above
 the green candle's high. {dl(p3)}</p>
 {_table(three, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"])}
+
+<h2>(c) Daily SHORT 4-candle formation ({len(dshort)}) — {dsd}</h2>
+<p class='muted'>Green (A) → red (B) with high above A's high → green (C) → today red (D) with high above C's high.
+SL ref = higher of B/D highs. {dl(ps)}</p>
+{_table(dshort, ["symbol", "today_close", "change_%", "A_green", "B_red", "C_green", "D_red_today", "sl_ref"])}
 
 <h2>Backtest — {bts.get('days', '–')} sessions ({period})</h2>
 <div class="cards">

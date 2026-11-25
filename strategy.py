@@ -170,3 +170,37 @@ def daily_reversal_for(daily_by_sym, today, lookback=5, break_mode="close"):
             break                                         # only the most recent green/red pair
     return pd.DataFrame(rows, columns=["symbol", "date", "green_candle", "red_candle",
                                        "today_close", "change_%", "days_since_red"])
+
+
+def daily_short_for(daily_by_sym, today):
+    """
+    4-candle daily SHORT pattern (four consecutive daily candles, D = today):
+      A. GREEN candle
+      B. RED candle whose HIGH goes above A's high
+      C. GREEN candle
+      D. RED candle (today) whose HIGH goes above C's high
+    Stop-loss reference = the higher of B's and D's highs.
+    """
+    rows = []
+    for s, df in daily_by_sym.items():
+        d = df[df.index.date <= today]
+        if len(d) < 5 or d.index[-1].date() != today:
+            continue
+        a, b, c, t = d.iloc[-4], d.iloc[-3], d.iloc[-2], d.iloc[-1]
+        green = lambda k: k["Close"] > k["Open"]
+        red = lambda k: k["Close"] < k["Open"]
+        if not (green(a) and red(b) and b["High"] > a["High"]
+                and green(c) and red(t) and t["High"] > c["High"]):
+            continue
+        dt_ = lambda n: f"{d.index[n].date():%d %b}"
+        r2 = lambda v: round(float(v), 2)
+        rows.append({"symbol": s, "date": today,
+                     "A_green": f"{dt_(-4)} H {r2(a['High'])}",
+                     "B_red": f"{dt_(-3)} H {r2(b['High'])}",
+                     "C_green": f"{dt_(-2)} H {r2(c['High'])}",
+                     "D_red_today": f"{dt_(-1)} H {r2(t['High'])}",
+                     "today_close": r2(t["Close"]),
+                     "change_%": round(float(t["Close"] / c["Close"] - 1) * 100, 2),
+                     "sl_ref": r2(max(b["High"], t["High"]))})
+    return pd.DataFrame(rows, columns=["symbol", "date", "A_green", "B_red", "C_green", "D_red_today",
+                                       "today_close", "change_%", "sl_ref"])

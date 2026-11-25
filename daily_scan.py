@@ -7,6 +7,9 @@ File (b)  signals/daily_3candle_<date>.csv  - 3-candle formation:
     GREEN daily candle -> next candle RED, closing below its low -> TODAY closes above the green
     candle's high. The red candle can be any of the last LOOKBACK (default 5) sessions before today;
     today must be the first close above that green high.
+File (c)  signals/daily_short_<date>.csv    - 4-candle SHORT formation (consecutive daily candles):
+    A GREEN -> B RED with high above A's high -> C GREEN -> D (today) RED with high above C's high.
+    Stop-loss reference = higher of B's and D's highs.
 
 Both lists (and the CSV files) go out in one GitHub issue (email / GitHub app), Telegram if configured, and the web page.
 """
@@ -15,9 +18,11 @@ import datetime as dt
 import os
 import sys
 
+import pandas as pd
+
 import page
 from monitor import retry, github_issue, notify, telegram_file, telegram, telegram_photo
-from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for
+from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for, daily_short_for
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 PAGE_URL = os.getenv("PAGE_URL", "")
@@ -47,11 +52,17 @@ def main():
     three = daily_reversal_for(daily, last, LOOKBACK)
     three = three.sort_values("change_%", ascending=False) if not three.empty else three
 
+    # (c) 4-candle SHORT formation
+    short = daily_short_for(daily, last)
+    short = short.sort_values("change_%") if not short.empty else short
+
     os.makedirs("signals", exist_ok=True)
     f2, f3 = f"signals/daily_2candle_{last}.csv", f"signals/daily_3candle_{last}.csv"
+    fs = f"signals/daily_short_{last}.csv"
     two.to_csv(f2, index=False)
     three.to_csv(f3, index=False)
-    print(f"[info] {last}: 2-candle {len(two)} stocks, 3-candle {len(three)} stocks.")
+    short.to_csv(fs, index=False)
+    print(f"[info] {last}: 2-candle {len(two)}, 3-candle {len(three)}, short {len(short)} stocks.")
 
     def md_table(df, cols, heads):
         if df.empty:
@@ -61,7 +72,7 @@ def main():
 
     link = lambda f: f"[download CSV](https://github.com/{REPO}/blob/main/{f})" if REPO else f
     owner = os.getenv("GITHUB_REPOSITORY_OWNER", "")
-    title = f"[Daily] {last:%d %b} · 2-candle: {len(two)} · 3-candle: {len(three)}"
+    title = f"[Daily] {last:%d %b} · 2-candle: {len(two)} · 3-candle: {len(three)} · short: {len(short)}"
     body = (f"{'@' + owner if owner else ''}\n\n"
             f"### (a) 2-candle formation — {len(two)} stocks\n"
             f"Yesterday green → **today red, closing below the green candle's low**. {link(f2)}\n\n"
@@ -72,22 +83,29 @@ def main():
             f"**today closed above the green candle's high**. {link(f3)}\n\n"
             + md_table(three, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"],
                        ["Stock", "Today's close", "Today %", "Green candle (H / L)", "Red candle", "Days since red"]) +
+            f"\n\n### (c) SHORT 4-candle formation — {len(short)} stocks\n"
+            f"Green (A) → red (B) with high above A's high → green (C) → **today red (D) with high above C's high**. "
+            f"SL ref = higher of B/D highs. {link(fs)}\n\n"
+            + md_table(short, ["symbol", "today_close", "change_%", "A_green", "B_red", "C_green", "D_red_today", "sl_ref"],
+                       ["Stock", "Today's close", "Today %", "A green", "B red", "C green", "D red (today)", "SL ref"]) +
             f"\n\n{PAGE_URL}")
     github_issue(title, body, "daily-list")
     notify(f"[Daily] {last:%d %b}\n(a) 2-candle ({len(two)}): {', '.join(two['symbol']) or '-'}\n"
-           f"(b) 3-candle ({len(three)}): {', '.join(three['symbol']) or '-'}" + (f"\n{PAGE_URL}" if PAGE_URL else ""), "daily")
+           f"(b) 3-candle ({len(three)}): {', '.join(three['symbol']) or '-'}\n"
+           f"(c) SHORT 4-candle ({len(short)}): {', '.join(short['symbol']) or '-'}" + (f"\n{PAGE_URL}" if PAGE_URL else ""), "daily")
     # attach the files on Telegram: stock lists + today's index 15-min files
     telegram_file(f2, f"(a) Stocks 2-candle - {last:%d %b} - {len(two)} stocks")
     telegram_file(f3, f"(b) Stocks 3-candle - {last:%d %b} - {len(three)} stocks")
+    telegram_file(fs, f"(c) Stocks SHORT 4-candle - {last:%d %b} - {len(short)} stocks")
     for kind, label in (("2candle", "2-candle"), ("3candle", "3-candle"), ("short", "SHORT signals")):
         p = f"signals/index_{kind}_{last}.csv"
         if os.path.exists(p):
             telegram_file(p, f"Index 15-min {label} - {last:%d %b}")
-    send_pattern_charts(daily, last, two, three)
+    send_pattern_charts(daily, last, two, three, short)
     page.build()
 
 
-def send_pattern_charts(daily, last, two, three, k=5):
+def send_pattern_charts(daily, last, two, three, short=None, k=5):
     """1-day chart (swing highs/lows + volume) for every stock in the 2-candle and 3-candle lists -> Telegram."""
     import datetime as _dt
     import shutil
@@ -111,6 +129,12 @@ def send_pattern_charts(daily, last, two, three, k=5):
                                                 (last, "break", "#2563eb")],
                      f"(b) 3-candle: green {r['green_candle']} -> red {r['red_candle']} -> "
                      f"today close {r['today_close']} above green high ({r['change_%']:+}%)"))
+    for _, r in (short if short is not None else pd.DataFrame()).iterrows():
+        dates = [d_of(r[c]) for c in ("A_green", "B_red", "C_green")]
+        jobs.append((r["symbol"], "short", [(dates[0], "A", "#16a34a"), (dates[1], "B", "#dc2626"),
+                                             (dates[2], "C", "#16a34a"), (last, "D", "#dc2626")],
+                     f"(c) SHORT: A {r['A_green']} -> B {r['B_red']} -> C {r['C_green']} -> today D {r['D_red_today']}, "
+                     f"close {r['today_close']} ({r['change_%']:+}%), SL ref {r['sl_ref']}"))
     if not jobs:
         return
     from swing_charts import make_pdf
@@ -129,7 +153,8 @@ def send_pattern_charts(daily, last, two, three, k=5):
         except Exception as e:
             print(f"[warn] chart {sym}: {e}")
     pdf = f"{out}/daily_patterns_{last}.pdf"
-    make_pdf(pngs, pdf, f"Daily pattern charts - {last:%d %b %Y}  ({len(two)} x 2-candle, {len(three)} x 3-candle)",
+    make_pdf(pngs, pdf, f"Daily pattern charts - {last:%d %b %Y}  ({len(two)} x 2-candle, {len(three)} x 3-candle, "
+             f"{0 if short is None else len(short)} x short)",
              ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.", ""]
              + lines)
     telegram_file(pdf, f"Daily pattern charts - {last:%d %b} - {len(pngs)} stocks (1-day, swing highs/lows, volume)")
