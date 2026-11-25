@@ -158,3 +158,7 @@ def send_pattern_charts(daily, last, two, three, short=None, k=5):
              ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.", ""]
              + lines)
     telegram_file(pdf, f"Daily pattern charts - {last:%d %b} - {len(pngs)} stocks (1-day, swing highs/lows, volume)")
+
+
+if __name__ == "__main__":
+    main()
