@@ -1,0 +1,7 @@
+symbol,date,green_candle,red_candle,today_close,change_%,days_since_red
+MCX,2026-11-26,17 Nov H 3748.0 / L 3657.1,18 Nov close 3619.0,3835.0,7.57,5
+ENRIN,2026-11-26,19 Nov H 3012.0 / L 2946.7,20 Nov close 2944.0,3058.0,2.96,3
+CDSL,2026-11-26,20 Nov H 1440.6 / L 1407.1,23 Nov close 1395.0,1441.0,1.98,2
+RELIANCE,2026-11-26,20 Nov H 1383.0 / L 1356.1,23 Nov close 1351.0,1396.2,1.62,2
+ANANDRATHI,2026-11-26,20 Nov H 2390.0 / L 2360.0,23 Nov close 2355.9,2410.0,1.26,2
+ASTRAL,2026-11-26,20 Nov H 1252.6 / L 1236.5,23 Nov close 1225.0,1258.3,0.97,2
