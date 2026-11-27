@@ -57,8 +57,9 @@ def swings(df, k):
     return hi, lo
 
 
-def chart(sym, mcap, df, hi, lo, k, path, highlight=None, title_extra=""):
-    """highlight: optional list of (date, label, colour) - shades those candles (e.g. the pattern candles)."""
+def chart(sym, mcap, df, hi, lo, k, path, highlight=None, title_extra="", sr=None):
+    """highlight: optional list of (date, label, colour) - shades those candles (e.g. the pattern candles).
+    sr: optional (supports, resistances) from strategy.sr_levels - drawn as solid S / R lines."""
     has_vol = "Volume" in df.columns and df["Volume"].fillna(0).sum() > 0
     if has_vol:
         fig, (ax, axv) = plt.subplots(2, 1, figsize=(13, 8), dpi=110, sharex=True,
@@ -101,6 +102,17 @@ def chart(sym, mcap, df, hi, lo, k, path, highlight=None, title_extra=""):
         l = df["Low"].iloc[lo[-1]]
         ax.axhline(l, color="#15803d", linestyle="--", linewidth=0.9, alpha=0.7)
         ax.text(len(df) - 0.5, l, f" last swing low {l:,.1f}", va="top", ha="right", fontsize=9, color="#15803d")
+    # Green->Red low-break SUPPORT / Red->Green high-break RESISTANCE (solid lines, labels right of the chart)
+    right = len(df) + 1
+    if sr:
+        right = len(df) + 7
+        for levels, colr, tag in ((sr[0], "#0891b2", "S"), (sr[1], "#ea580c", "R")):
+            for d, p in levels:
+                pos = [j for j, ix in enumerate(df.index) if ix.date() >= d]
+                x0 = pos[0] if pos else 0
+                ax.hlines(p, x0, len(df) + 0.5, color=colr, linewidth=1.6)
+                ax.text(len(df) + 0.8, p, f"{tag} {p:,.1f}", va="center", fontsize=8.5,
+                        color=colr, fontweight="bold")
     step = max(1, len(df) // 10)
     if has_vol:
         cols = ["#16a34a" if c >= o else "#dc2626" for o, c in zip(df["Open"], df["Close"])]
@@ -115,8 +127,9 @@ def chart(sym, mcap, df, hi, lo, k, path, highlight=None, title_extra=""):
         axv.set_xticklabels([d.strftime("%d %b") for d in df.index[::step]], fontsize=9)
     ax.set_xticks(list(x)[::step])
     ax.set_xticklabels([d.strftime("%d %b") for d in df.index[::step]], fontsize=9)
-    ax.set_xlim(-1, len(df) + 1)
-    ax.set_ylim(df["Low"].min() - rng * 0.1, df["High"].max() + rng * 0.08)
+    ax.set_xlim(-1, right)
+    lvls = [p for side in (sr or ()) for _, p in side]
+    ax.set_ylim(min([df["Low"].min()] + lvls) - rng * 0.1, max([df["High"].max()] + lvls) + rng * 0.08)
     ax.grid(alpha=0.25)
     mc = f"mcap ₹{mcap / 1e12:,.2f} lakh cr · " if mcap else ""
     ax.set_title(f"{sym} — daily, swing highs ▼ / lows ▲ ({k} candles each side) · "

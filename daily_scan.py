@@ -22,7 +22,7 @@ import pandas as pd
 
 import page
 from monitor import retry, github_issue, notify, telegram_file, telegram, telegram_photo
-from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for, daily_short_for
+from strategy import download, get_fo_symbols, daily_qualifiers_for, daily_reversal_for, daily_short_for, sr_levels
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 PAGE_URL = os.getenv("PAGE_URL", "")
@@ -56,6 +56,19 @@ def main():
     short = daily_short_for(daily, last)
     short = short.sort_values("change_%") if not short.empty else short
 
+    # Support / resistance (green->red low break = S, red->green high break = R) for both lists
+    def add_sr(df):
+        if df.empty:
+            return df
+        sup_col, res_col = [], []
+        for s in df["symbol"]:
+            sup, res = sr_levels(daily[s][daily[s].index.date <= last])
+            sup_col.append(", ".join(f"{p}" for _, p in sup) or "-")
+            res_col.append(", ".join(f"{p}" for _, p in res) or "-")
+        df["support"], df["resistance"] = sup_col, res_col
+        return df
+    two, three = add_sr(two), add_sr(three)
+
     os.makedirs("signals", exist_ok=True)
     f2, f3 = f"signals/daily_2candle_{last}.csv", f"signals/daily_3candle_{last}.csv"
     fs = f"signals/daily_short_{last}.csv"
@@ -76,13 +89,15 @@ def main():
     body = (f"{'@' + owner if owner else ''}\n\n"
             f"### (a) 2-candle formation — {len(two)} stocks\n"
             f"Yesterday green → **today red, closing below the green candle's low**. {link(f2)}\n\n"
-            + md_table(two, ["symbol", "today_close", "change_%", "green_candle", "red_candle"],
-                       ["Stock", "Today's close", "Today %", "Green candle", "Red candle (today)"]) +
+            + md_table(two, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "support", "resistance"],
+                       ["Stock", "Today's close", "Today %", "Green candle", "Red candle (today)", "Support", "Resistance"]) +
             f"\n\n### (b) 3-candle formation — {len(three)} stocks\n"
             f"Green → next candle red, closing below its low (within last {LOOKBACK} sessions) → "
             f"**today closed above the green candle's high**. {link(f3)}\n\n"
-            + md_table(three, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red"],
-                       ["Stock", "Today's close", "Today %", "Green candle (H / L)", "Red candle", "Days since red"]) +
+            + md_table(three, ["symbol", "today_close", "change_%", "green_candle", "red_candle", "days_since_red",
+                              "support", "resistance"],
+                       ["Stock", "Today's close", "Today %", "Green candle (H / L)", "Red candle", "Days since red",
+                        "Support", "Resistance"]) +
             f"\n\n### (c) SHORT 4-candle formation — {len(short)} stocks\n"
             f"Green (A) → red (B) with high above A's high → green (C) → **today red (D) with high above C's high**. "
             f"SL ref = higher of B/D highs. {link(fs)}\n\n"
@@ -106,7 +121,7 @@ def main():
 
 
 def send_pattern_charts(daily, last, two, three, short=None, k=5):
-    """1-day chart (swing highs/lows + volume) for every stock in the 2-candle and 3-candle lists -> Telegram."""
+    """1-day chart (swing highs/lows + volume, plus S/R lines on 2- and 3-candle charts) for every stock -> Telegram."""
     import datetime as _dt
     import shutil
     from swing_charts import chart, swings
@@ -146,8 +161,14 @@ def send_pattern_charts(daily, last, two, three, short=None, k=5):
         df = df[df.index.date <= last].dropna().iloc[-65:]      # last ~3 months, so pattern candles are readable
         hi, lo = swings(df, k)
         path = f"{out}/{kind}_{sym}.png"
+        sr = None
+        if kind in ("2-candle", "3-candle"):
+            full = daily[sym][daily[sym].index.date <= last].dropna()
+            sr = sr_levels(full)
+            cap += (f" | S {', '.join(str(p) for _, p in sr[0]) or '-'}"
+                    f" | R {', '.join(str(p) for _, p in sr[1]) or '-'}")
         try:
-            chart(sym, 0, df, hi, lo, k, path, highlight=hl, title_extra=f" · {kind}")
+            chart(sym, 0, df, hi, lo, k, path, highlight=hl, title_extra=f" · {kind}", sr=sr)
             pngs.append(path)
             lines.append(f"{sym:<12} {cap}"[:150])
         except Exception as e:
@@ -155,7 +176,9 @@ def send_pattern_charts(daily, last, two, three, short=None, k=5):
     pdf = f"{out}/daily_patterns_{last}.pdf"
     make_pdf(pngs, pdf, f"Daily pattern charts - {last:%d %b %Y}  ({len(two)} x 2-candle, {len(three)} x 3-candle, "
              f"{0 if short is None else len(short)} x short)",
-             ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.", ""]
+             ["Shaded candles = the pattern (green / red / blue = today's break). Swing highs v, lows ^, volume below.",
+              "2/3-candle charts: solid blue S = support (green candle low broken by next red close),",
+              "solid orange R = resistance (red candle high broken by next green close).", ""]
              + lines)
     telegram_file(pdf, f"Daily pattern charts - {last:%d %b} - {len(pngs)} stocks (1-day, swing highs/lows, volume)")
 

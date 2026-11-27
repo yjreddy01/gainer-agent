@@ -134,6 +134,43 @@ def daily_qualifiers_for(daily_by_sym, prev_date, break_mode="close"):
 
 
 
+def sr_levels(df, break_mode="close", n=3, merge_pct=0.5):
+    """
+    Support / resistance from consecutive daily candles:
+      SUPPORT    = low of a GREEN candle when the very next candle is RED and breaks that low
+      RESISTANCE = high of a RED candle when the very next candle is GREEN and breaks that high
+    break_mode "close" = the next candle must CLOSE beyond the level (same as the 2/3-candle alerts),
+               "wick"  = its low / high only has to pierce it.
+    Returns (supports, resistances): the n nearest below / above the last close, as (date, price) lists.
+    Levels within merge_pct % of each other are one zone (the most recent one is kept).
+    """
+    d = df.dropna()
+    sup, res = [], []
+    for i in range(1, len(d)):
+        p, c = d.iloc[i - 1], d.iloc[i]
+        if p["Close"] > p["Open"] and c["Close"] < c["Open"]:
+            if (c["Close"] if break_mode == "close" else c["Low"]) < p["Low"]:
+                sup.append((d.index[i - 1].date(), round(float(p["Low"]), 2)))
+        if p["Close"] < p["Open"] and c["Close"] > c["Open"]:
+            if (c["Close"] if break_mode == "close" else c["High"]) > p["High"]:
+                res.append((d.index[i - 1].date(), round(float(p["High"]), 2)))
+    last = float(d["Close"].iloc[-1])
+
+    def nearest(levels, below):
+        lv = sorted([x for x in levels if (x[1] <= last if below else x[1] >= last)],
+                    key=lambda x: -x[1] if below else x[1])
+        out = []
+        for x in lv:
+            j = next((k for k, o in enumerate(out) if abs(o[1] - x[1]) / x[1] * 100 < merge_pct), None)
+            if j is None:
+                out.append(x)
+            elif x[0] > out[j][0]:
+                out[j] = x
+        return out[:n]
+
+    return nearest(sup, True), nearest(res, False)
+
+
 def daily_reversal_for(daily_by_sym, today, lookback=5, break_mode="close"):
     """
     3-candle daily pattern:
