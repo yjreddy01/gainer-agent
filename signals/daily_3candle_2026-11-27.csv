@@ -1,0 +1,4 @@
+symbol,date,green_candle,red_candle,today_close,change_%,days_since_red
+BDL,2026-11-27,20 Nov H 1036.95 / L 1023.3,23 Nov close 1020.0,1077.5,4.13,3
+OIL,2026-11-27,20 Nov H 432.05 / L 426.4,23 Nov close 422.5,433.45,1.49,3
+LUPIN,2026-11-27,20 Nov H 2014.0 / L 1985.1,23 Nov close 1975.6,2016.0,0.55,3
